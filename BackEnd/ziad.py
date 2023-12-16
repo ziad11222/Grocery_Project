@@ -87,7 +87,45 @@ def signup():
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
 
-# ... (Other endpoints)
+# Endpoint to place an order (Buy Now)
+@app.route('/placeOrder', methods=['POST'])
+def place_order():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+        quantity = data.get('quantity')
+        payment_method_id = data.get('payment_method_id')
+
+
+        # Insert the order into the orders table
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                # Insert the order into the orders table
+                cursor.execute(
+                    "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
+                    "VALUES (%s, %s, %s, %s, NOW())",
+                    (client_email, None, payment_method_id, None)
+                )
+                order_id = cursor.lastrowid
+
+                # Insert the product and quantity into the product_order table
+                cursor.execute(
+                    "INSERT INTO product_order (product_id, order_id, product_quantity) "
+                    "VALUES (%s, %s, %s)",
+                    (product_id, order_id, quantity)
+                )
+
+                db_conn.commit()
+
+        return jsonify({"message": "Order placed successfully"})
+
+    except Error as e:
+        return jsonify({"error": f"Place order error: {e}"}), 500
+
+
+#OtherEndpoints..... 
+
 
 # Run the Flask app
 if __name__ == '__main__':
