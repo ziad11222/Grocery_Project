@@ -182,6 +182,24 @@ def remove_payment_method():
     except IntegrityError as e:
         return jsonify({"error": f"Remove payment method error: {e}"}), 500
 
+@app.route('/getPaymentMethods', methods=['GET'])
+def get_payment_methods():
+    try:
+        client_email = request.args.get('client_email')
+        # Query the database to retrieve payment methods
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT * FROM payment WHERE user_id = %s", (client_email,))
+                payment_methods = cursor.fetchall()
+
+        if not payment_methods:
+            return jsonify({"message": "No payment methods found for the given client_email"}), 404
+
+        return jsonify(payment_methods)
+
+    except Error as e:
+        return jsonify({"error": f"Get payment methods error: {e}"}), 500
+
 
 #OtherEndpoints..... 
 
