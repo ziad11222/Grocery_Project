@@ -97,7 +97,9 @@ def place_order():
         quantity = data.get('quantity')
         payment_method_id = data.get('payment_method_id')
 
-
+        # Check if the product is in stock and has enough quantity
+        if not is_product_available(product_id, quantity):
+            return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
         # Insert the order into the orders table
         with db_connection.get_connection() as db_conn:
             with db_conn.cursor(dictionary=True) as cursor:
@@ -105,7 +107,7 @@ def place_order():
                 cursor.execute(
                     "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
                     "VALUES (%s, %s, %s, %s, NOW())",
-                    (client_email, None, payment_method_id, None)
+                    (client_email, None, payment_method_id, None)  # You may need to modify this query based on your schema
                 )
                 order_id = cursor.lastrowid
 
@@ -115,7 +117,7 @@ def place_order():
                     "VALUES (%s, %s, %s)",
                     (product_id, order_id, quantity)
                 )
-
+                
                 db_conn.commit()
 
         return jsonify({"message": "Order placed successfully"})
@@ -123,6 +125,15 @@ def place_order():
     except Error as e:
         return jsonify({"error": f"Place order error: {e}"}), 500
 
+def is_product_available(product_id, requested_quantity):
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            # Retrieve the product's information
+            cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
+            product = cursor.fetchone()
+
+            # Check if the product exists and is in stock
+            return product and int(product['quantity']) >= int(requested_quantity)
 
 #OtherEndpoints..... 
 
