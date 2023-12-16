@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import random
 import mysql.connector
 from mysql.connector import Error
+from mysql.connector import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -156,6 +157,31 @@ def add_payment_method():
 
     except Error as e:
         return jsonify({"error": f"Add payment method error: {e}"}), 500
+
+
+# Endpoint to remove a payment method
+@app.route('/removePaymentMethod', methods=['POST'])
+def remove_payment_method():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        payment_method_id = data.get('payment_method_id')
+
+        # Remove the payment method from the database
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("DELETE FROM payment WHERE user_id = %s AND id = %s", (client_email, payment_method_id))
+                affected_rows = cursor.rowcount
+                db_conn.commit()
+
+                if affected_rows == 0:
+                    return jsonify({"error": "Payment method not found"}), 404
+
+        return jsonify({"message": "Payment method removed successfully"})
+
+    except IntegrityError as e:
+        return jsonify({"error": f"Remove payment method error: {e}"}), 500
+
 
 #OtherEndpoints..... 
 
