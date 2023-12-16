@@ -8,10 +8,10 @@ app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': '35.232.88.254',
+    'host': '34.27.244.125',
     'port': 3306,
     'user': 'ziadym',
-    'password': 'Zz4226#$',
+    'password': '112233',
     'database': 'grocerystore'
 }
 
