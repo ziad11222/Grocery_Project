@@ -117,7 +117,7 @@ def place_order():
                     "VALUES (%s, %s, %s)",
                     (product_id, order_id, quantity)
                 )
-                
+
                 db_conn.commit()
 
         return jsonify({"message": "Order placed successfully"})
@@ -134,6 +134,28 @@ def is_product_available(product_id, requested_quantity):
 
             # Check if the product exists and is in stock
             return product and int(product['quantity']) >= int(requested_quantity)
+
+# Endpoint to add a payment method
+@app.route('/addPaymentMethod', methods=['POST'])
+def add_payment_method():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        card_owner = data.get('card_owner')
+        card_number = data.get('card_number')
+        cvv = data.get('cvv')
+
+        # Insert the payment method into the database
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("INSERT INTO payment (user_id, card_owner, card_number, cvv) VALUES (%s, %s, %s, %s)",
+                               (client_email, card_owner, card_number, cvv))
+                db_conn.commit()
+
+        return jsonify({"message": "Payment method added successfully"})
+
+    except Error as e:
+        return jsonify({"error": f"Add payment method error: {e}"}), 500
 
 #OtherEndpoints..... 
 
