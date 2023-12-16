@@ -200,6 +200,23 @@ def get_payment_methods():
     except Error as e:
         return jsonify({"error": f"Get payment methods error: {e}"}), 500
 
+@app.route('/myOrders', methods=['GET'])
+def get_my_orders():
+    try:
+        client_email = request.args.get('client_email')
+
+        # Query the database to retrieve user's orders
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT * FROM orders WHERE user_id = %s", (client_email,))
+                orders = cursor.fetchall()
+        if not orders:
+            return jsonify({"message": "No orders found for the given client_email"}), 404
+
+        return jsonify(orders)
+
+    except Error as e:
+        return jsonify({"error": f"Get orders error: {e}"}), 500
 
 #OtherEndpoints..... 
 
