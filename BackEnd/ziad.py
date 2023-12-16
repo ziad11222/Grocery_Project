@@ -101,14 +101,21 @@ def place_order():
         # Check if the product is in stock and has enough quantity
         if not is_product_available(product_id, quantity):
             return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
+        #Creation of a new cart and assigning id to it for the order
+        cart_id = create_cart(client_email)
+
         # Insert the order into the orders table
         with db_connection.get_connection() as db_conn:
             with db_conn.cursor(dictionary=True) as cursor:
+
+                # Calculate total price of the order based on product id and quantity
+                total_price = calculate_total_price(product_id,quantity)
+
                 # Insert the order into the orders table
                 cursor.execute(
                     "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
                     "VALUES (%s, %s, %s, %s, NOW())",
-                    (client_email, None, payment_method_id, None)  # You may need to modify this query based on your schema
+                    (client_email,cart_id, payment_method_id,total_price)  # You may need to modify this query based on your schema
                 )
                 order_id = cursor.lastrowid
 
@@ -135,6 +142,31 @@ def is_product_available(product_id, requested_quantity):
 
             # Check if the product exists and is in stock
             return product and int(product['quantity']) >= int(requested_quantity)
+
+# Function to create a new cart for the user and return the cart_id
+def create_cart(client_email):
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            # Insert a new cart for the user
+            cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0)", (client_email,))
+            cart_id = cursor.lastrowid
+            db_conn.commit()
+    return cart_id
+
+# Function to calculate the total price based on product price and quantity
+def calculate_total_price(product_id, quantity):
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            # Retrieve the product's information
+            cursor.execute("SELECT price FROM product WHERE id = %s", (product_id,))
+            product = cursor.fetchone()
+
+            # Check if the product exists
+            if product:
+                # Calculate total price by multiplying quantity and product price
+                total_price = int(quantity) * int(product['price'])
+                return total_price
+    return 0  # Return 0 if the product is not found or if there's an issue retrieving the price
 
 # Endpoint to add a payment method
 @app.route('/addPaymentMethod', methods=['POST'])
