@@ -8,11 +8,11 @@ app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': 'mysql-156959-0.cloudclusters.net',
-    'port': 18579,
-    'user': 'admin',
-    'password': '9n8ZbOza',
-    'database': 'Groceyshop'
+    'host': '35.232.88.254',
+    'port': 3306,
+    'user': 'ziadym',
+    'password': 'Zz4226#$',
+    'database': 'grocerystore'
 }
 
 # Initialize MySQL connection pool
@@ -72,8 +72,6 @@ def signup():
 
         # Generate and send OTP
         otp = generate_otp()
-        otp = generate_otp()
-        send_otp_email(email, otp)
 
         return jsonify({"message": "User registered successfully. OTP sent to your email"})
 
@@ -93,5 +91,4 @@ def signup():
 
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(debug=True)
-   
+    app.run(host='0.0.0.0', port=5000, debug=True)
