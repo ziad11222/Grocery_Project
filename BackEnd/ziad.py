@@ -250,6 +250,16 @@ def get_my_orders():
     except Error as e:
         return jsonify({"error": f"Get orders error: {e}"}), 500
 
+@app.route('/getAllProduct', methods=['GET'])
+def get_all_products():
+    # Query the database to retrieve all products
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+             cursor.execute("SELECT * FROM product")
+             products = cursor.fetchall()
+
+    return jsonify(products)
+
 #OtherEndpoints..... 
 
 
