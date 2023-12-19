@@ -4,7 +4,9 @@ import mysql.connector
 from mysql.connector import Error
 from mysql.connector import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
-
+import jwt
+import datetime
+import secrets
 app = Flask(__name__)
 
 # Database configuration
@@ -17,11 +19,13 @@ db_config = {
 }
 
 # Initialize MySQL connection pool
-db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **db_config)
+db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
 
 # Helper function to generate OTP
 def generate_otp():
     return str(random.randint(1000, 9999))
+
+SECRET_KEY = secrets.token_hex(32)
 
 # Endpoint for user login
 @app.route('/login', methods=['POST'])
@@ -40,10 +44,29 @@ def login():
             if not user or not check_password_hash(user['password'], password):
                 return jsonify({"error": "Invalid credentials"}), 401
 
-        return jsonify({"message": "Logged in successfully"})
+            # Generate JWT token with user information
+            token_payload = {
+                'email': user['email'],
+                'username': user['user_name'],
+                'profile_image': user.get('profile_image', ''),  # Adjust accordingly
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=2)  # Token expiration time
+            }
+
+            # Encode the token using the secret key
+            token = jwt.encode(token_payload, SECRET_KEY, algorithm='HS256')
+
+        # Send the token along with other user data to the frontend
+        user_data = {
+            'email': user['email'],
+            'username': user['user_name'],
+            'profile_image': user.get('profile_image', '')
+        }
+
+        return jsonify({"message": "Logged in successfully", "token": token, "user_data": user_data})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
+
 
 # Endpoint for user registration
 @app.route('/signup', methods=['POST'])
@@ -55,6 +78,7 @@ def signup():
         user_name = data.get('user_name')
         b_date = data.get('b_date')
         address = data.get('address')
+        profile_image = data.get('profile_image')
 
         # Check if user already exists
         connection = db_connection.get_connection()
@@ -66,9 +90,9 @@ def signup():
                 return jsonify({"error": "User already exists"}), 400
 
             # Insert new user into the database
-            cursor.execute("INSERT INTO client (email, password, user_name, b_date, address) "
-                            "VALUES (%s, %s, %s, %s, %s)",
-                            (email, password, user_name, b_date, address))
+            cursor.execute("INSERT INTO client (email, password, user_name, b_date, address, profile_image) "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            (email, password, user_name, b_date, address, profile_image))
             connection.commit()
 
         # Generate and send OTP
