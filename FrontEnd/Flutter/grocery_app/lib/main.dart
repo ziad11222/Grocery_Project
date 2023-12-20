@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'signup.dart';
 import 'forgetpassword.dart';
 import 'Homepage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+
 
 void main() {
   runApp(MaterialApp(
@@ -18,11 +22,10 @@ class loginpage extends StatefulWidget {
 }
 
 class _loginpageState extends State<loginpage> {
-  
-
   var email;
   var password;
   var response;
+  var image;
   GlobalKey<FormState> KEY = GlobalKey<FormState>();
   @override
   Widget build(BuildContext context) {
@@ -82,12 +85,13 @@ class _loginpageState extends State<loginpage> {
                                     style: TextStyle(color: Colors.grey),
                                     "Don't have an account?"),
                                 GestureDetector(
-                                  onTap: () {Navigator.push(context,
-                                            MaterialPageRoute(
-                                              builder: (context) {
-                                                return signup();
-                                              },
-                                            ));},
+                                  onTap: () {
+                                    Navigator.push(context, MaterialPageRoute(
+                                      builder: (context) {
+                                        return signup();
+                                      },
+                                    ));
+                                  },
                                   child: Text(
                                       style:
                                           TextStyle(color: Colors.greenAccent),
@@ -139,11 +143,6 @@ class _loginpageState extends State<loginpage> {
                                     });
                                   },
                                   obscureText: true,
-                                  validator: (value) {
-                                    if (value!.length < 6) {
-                                      return 'password must be more than 6';
-                                    }
-                                  },
                                   decoration: InputDecoration(
                                       border: OutlineInputBorder(
                                           borderRadius:
@@ -158,12 +157,13 @@ class _loginpageState extends State<loginpage> {
                                         style: TextStyle(
                                             fontSize: 12, color: Colors.red),
                                         'Forgot password?'),
-                                    onTap: () {Navigator.push(context,
-                                            MaterialPageRoute(
-                                              builder: (context) {
-                                                return check();
-                                              },
-                                            ));}),
+                                    onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(
+                                        builder: (context) {
+                                          return check();
+                                        },
+                                      ));
+                                    }),
                                 padding: EdgeInsets.only(left: 190)),
                             SizedBox(height: 30),
                             SizedBox(
@@ -175,12 +175,11 @@ class _loginpageState extends State<loginpage> {
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(10))),
-                                  onPressed: () {Navigator.push(context,
-                                            MaterialPageRoute(
-                                              builder: (context) {
-                                                return HomePage();
-                                              },
-                                            ));},
+                                  onPressed: () {
+                                    setState(() {
+                                      login(email, password);
+                                    });
+                                  },
                                   child: Text('Sign In')),
                             ),
                           ]),
@@ -191,6 +190,36 @@ class _loginpageState extends State<loginpage> {
     );
   }
 
-  @override
-  void initState() {}
+  Future<void> login(String email, String password) async {
+    final Map<String, dynamic> loginData = {
+      'email': email,
+      'password': password,
+    };
+    final http.Response response = await http.post(
+      Uri.parse('http://34.27.244.125/login'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(loginData),
+    );
+    Map<String, dynamic> map = json.decode(response.body);
+    print('--------------------------------------------------------');
+    print(response.statusCode);
+    print('--------------------------------------------------------');
+    print(response.body);
+    String? message = map['message'];
+    image = map['user_data']['profile_image'];
+    String token = map['token'] ?? '';
+    print(image);
+    
+    print(message);
+    if (message == 'Logged in successfully') {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (context) {
+          return HomePage();
+        },
+      ));
+    }
+    else print('user not found');
+  }
 }
