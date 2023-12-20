@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': '34.27.244.125',
+    'host': '34.31.110.154',
     'port': 3306,
     'user': 'ziadym',
     'password': '112233',
