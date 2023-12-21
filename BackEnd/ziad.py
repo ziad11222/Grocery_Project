@@ -284,6 +284,86 @@ def get_all_products():
 
     return jsonify(products)
 
+@app.route('/getAllProduct', methods=['GET'])
+def get_all_products():
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+             cursor.execute("SELECT * FROM product")
+             products = cursor.fetchall()
+
+    return jsonify(products)
+
+@app.route('/getProductInfo', methods=['GET'])
+def get_product_info():
+    product_id = request.args.get('product_id', type=int)
+
+    if product_id is None:
+        return jsonify({"error": "Product ID is required"}), 400
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
+            product = cursor.fetchone()
+
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+
+    return jsonify(product)
+
+
+
+
+@app.route('/filterByPrice', methods=['GET'])
+def filter_by_price():
+    price_from = request.args.get('from')
+    price_to = request.args.get('to')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            query = "SELECT * FROM product WHERE price BETWEEN %s AND %s"
+            cursor.execute(query,(price_from, price_to))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+
+
+@app.route('/filterByBrand', methods=['GET'])
+def filter_by_brand():
+    brand_name = request.args.get('brandName')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE brand = %s", (brand_name,))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+@app.route('/filterByNationality', methods=['GET'])
+def filter_by_nationality():
+
+    nationality = request.args.get('nationality')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE nationality = %s", (nationality,))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+@app.route('/filterEgyptian', methods=['GET'])
+def filter_Egypt():
+    nationality = request.args.get('nationality')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE nationality = 'Egyptian'")
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
 #OtherEndpoints..... 
 
 
