@@ -364,6 +364,83 @@ def filter_Egypt():
 
     return jsonify(products)
 
+@app.route('/getBySearch', methods=['GET'])
+def search_products():
+    # Get search query from query parameters
+    search_query = request.args.get('q')
+
+    # Query the database to search products by keyword
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE product_name LIKE %s", (f"%{search_query}%",))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+@app.route('/addToCart', methods=['POST'])
+def add_to_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+        cart_id = data.get('cart_id')
+        quantity = data.get('quantity')
+
+        # Validate input parameters
+        if not all([client_email, product_id, quantity]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        def is_product_available(product_id, requested_quantity):
+            with db_connection.get_connection() as db_conn:
+                with db_conn.cursor(dictionary=True) as cursor:
+                    cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
+                    product = cursor.fetchone()
+                    return product and int(product['quantity']) >= int(requested_quantity)
+
+        def create_cart(client_email):
+            with db_connection.get_connection() as db_conn:
+                with db_conn.cursor(dictionary=True) as cursor:
+                    cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0) ON DUPLICATE KEY UPDATE client_email=client_email", (client_email,))
+                    cart_id = cursor.lastrowid
+                    db_conn.commit()
+            return cart_id
+
+        # Check if the product is in stock and has enough quantity
+        if not is_product_available(product_id, quantity):
+            return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
+
+        if cart_id is None:
+            cart_id = create_cart(client_email)
+
+        # Insert the product into the cart
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("INSERT INTO product_cart (product_id, cart_id, quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+                db_conn.commit()
+
+        return jsonify({"message": "Product added to the cart successfully"})
+
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Add to cart error: {e}"}), 500
+
+
+
+@app.route('/view_cart')
+def view_my_cart () :
+    data = request.json
+    client_email = data.get('client_email')
+    product_id = data.get('product_id')
+    cart_id = data.get('cart_id')
+    with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
+                product = cursor.fetchall()
+
+
+
 #OtherEndpoints..... 
 
 
