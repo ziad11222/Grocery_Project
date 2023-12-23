@@ -7,23 +7,43 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 import secrets
+from flask_mail import Mail, Message
+from flask import url_for
+
 app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': '34.27.244.125',
+    'host': '34.31.110.154',
     'port': 3306,
     'user': 'ziadym',
     'password': '112233',
     'database': 'grocerystore'
 }
 
-# Initialize MySQL connection pool
-db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
+# Flask-Mail configuration
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'Info.Groceryshop@gmail.com'
+app.config['MAIL_PASSWORD'] = 'mkyg vojf mjjx mxst'
+mail = Mail(app)
 
 # Helper function to generate OTP
 def generate_otp():
     return str(random.randint(1000, 9999))
+
+# Helper function to send verification email
+def send_verification_email(email, verification_code):
+    try:
+        msg = Message('Verify Your Account', sender='your_email@example.com', recipients=[email])
+        msg.body = f'Your verification code is: {verification_code}'
+        mail.send(msg)
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+# Initialize MySQL connection pool
+db_connection = mysql.connector.connect(**db_config)
 
 SECRET_KEY = secrets.token_hex(32)
 
@@ -36,7 +56,7 @@ def login():
         password = data.get('password')
 
         # Fetch user from the database
-        connection = db_connection.get_connection()
+        connection = mysql.connector.connect(**db_config)
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM client WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -81,33 +101,109 @@ def signup():
         profile_image = data.get('profile_image')
 
         # Check if user already exists
-        connection = db_connection.get_connection()
-        with connection.cursor(dictionary=True) as cursor:
+        with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM client WHERE email = %s", (email,))
             existing_user = cursor.fetchone()
 
             if existing_user:
                 return jsonify({"error": "User already exists"}), 400
 
-            # Insert new user into the database
-            cursor.execute("INSERT INTO client (email, password, user_name, b_date, address, profile_image) "
-                            "VALUES (%s, %s, %s, %s, %s, %s)",
-                            (email, password, user_name, b_date, address, profile_image))
-            connection.commit()
+            # Insert new user into the database with 'is_verified' set to False
+            verification_code = generate_otp()
+            cursor.execute("INSERT INTO client (email, password, user_name, b_date, address, profile_image, is_verified, verification_code) "
+                            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                            (email, password, user_name, b_date, address, profile_image, False, verification_code))
+            db_connection.commit()
 
-        # Generate and send OTP
-        otp = generate_otp()
+            # Send verification email
+            send_verification_email(email, verification_code)
 
-        return jsonify({"message": "User registered successfully. OTP sent to your email"})
+        return jsonify({"message": "User registered successfully! Please check your email for verification."})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
 
+#verify endpoint
+@app.route('/verify', methods=['POST'])
+def verify():
+    try:
+        data = request.json
+        email = data.get('email')
+        verification_code = data.get('verification_code')
 
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM client WHERE email = %s AND verification_code = %s", (email, verification_code))
+            user = cursor.fetchone()
 
-        # You would normally send an email with this OTP
+            if not user:
+                return jsonify({"error": "Invalid verification code"}), 401
 
-        return jsonify({"message": "User registered successfully. OTP sent to your email"})
+            # Update the user's record to mark them as verified
+            cursor.execute("UPDATE client SET is_verified = True WHERE email = %s", (email,))
+            db_connection.commit()
+
+        return jsonify({"message": "Account verified successfully!"})
+
+    except Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+    
+
+# Helper function to generate a unique token for password reset
+def generate_reset_token():
+    return secrets.token_urlsafe(32)
+
+# Endpoint for requesting a password reset
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    try:
+        data = request.json
+        email = data.get('email')
+
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM client WHERE email = %s", (email,))
+            user = cursor.fetchone()
+
+            if not user:
+                return jsonify({"error": "Email not registered!"}), 404
+
+            # Generate a unique token for password reset
+            reset_token = generate_reset_token()
+
+            # Store the reset token in the database
+            cursor.execute("UPDATE client SET reset_token = %s WHERE email = %s", (reset_token, email))
+            db_connection.commit()
+
+            # Send an email with the password reset link
+            reset_link = url_for('reset_password', token=reset_token, _external=True)
+            msg = Message('Password Reset', sender='your_email@example.com', recipients=[email])
+            msg.body = f'Click on the following link to reset your password: {reset_link}'
+            mail.send(msg)
+
+        return jsonify({"message": "Password reset instructions sent to your email"})
+
+    except Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+
+# Endpoint for handling password reset
+@app.route('/reset-password/<token>', methods=['POST'])
+def reset_password(token):
+    try:
+        data = request.json
+        new_password = data.get('new_password')
+
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM client WHERE reset_token = %s", (token,))
+            user = cursor.fetchone()
+
+            if not user:
+                return jsonify({"error": "Invalid or expired token"}), 401
+
+            # Update the user's password and clear the reset token
+            hashed_password = generate_password_hash(new_password)
+            cursor.execute("UPDATE client SET password = %s, reset_token = NULL WHERE email = %s", (hashed_password, user['email']))
+            db_connection.commit()
+
+        return jsonify({"message": "Password reset successful"})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
@@ -283,6 +379,154 @@ def get_all_products():
              products = cursor.fetchall()
 
     return jsonify(products)
+
+@app.route('/getProductInfo', methods=['GET'])
+def get_product_info():
+    product_id = request.args.get('product_id', type=int)
+
+    if product_id is None:
+        return jsonify({"error": "Product ID is required"}), 400
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
+            product = cursor.fetchone()
+
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+
+    return jsonify(product)
+
+
+
+
+@app.route('/filterByPrice', methods=['GET'])
+def filter_by_price():
+    price_from = request.args.get('from')
+    price_to = request.args.get('to')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            query = "SELECT * FROM product WHERE price BETWEEN %s AND %s"
+            cursor.execute(query,(price_from, price_to))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+
+
+@app.route('/filterByBrand', methods=['GET'])
+def filter_by_brand():
+    brand_name = request.args.get('brandName')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE brand = %s", (brand_name,))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+@app.route('/filterByNationality', methods=['GET'])
+def filter_by_nationality():
+
+    nationality = request.args.get('nationality')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE nationality = %s", (nationality,))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+@app.route('/filterEgyptian', methods=['GET'])
+def filter_Egypt():
+    nationality = request.args.get('nationality')
+
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE nationality = 'Egyptian'")
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+@app.route('/getBySearch', methods=['GET'])
+def search_products():
+    # Get search query from query parameters
+    search_query = request.args.get('q')
+
+    # Query the database to search products by keyword
+    with db_connection.get_connection() as db_conn:
+        with db_conn.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE product_name LIKE %s", (f"%{search_query}%",))
+            products = cursor.fetchall()
+
+    return jsonify(products)
+
+
+@app.route('/addToCart', methods=['POST'])
+def add_to_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+        cart_id = data.get('cart_id')
+        quantity = data.get('quantity')
+
+        # Validate input parameters
+        if not all([client_email, product_id, quantity]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        def is_product_available(product_id, requested_quantity):
+            with db_connection.get_connection() as db_conn:
+                with db_conn.cursor(dictionary=True) as cursor:
+                    cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
+                    product = cursor.fetchone()
+                    return product and int(product['quantity']) >= int(requested_quantity)
+
+        def create_cart(client_email):
+            with db_connection.get_connection() as db_conn:
+                with db_conn.cursor(dictionary=True) as cursor:
+                    cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0) ON DUPLICATE KEY UPDATE client_email=client_email", (client_email,))
+                    cart_id = cursor.lastrowid
+                    db_conn.commit()
+            return cart_id
+
+        # Check if the product is in stock and has enough quantity
+        if not is_product_available(product_id, quantity):
+            return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
+
+        if cart_id is None:
+            cart_id = create_cart(client_email)
+
+        # Insert the product into the cart
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("INSERT INTO product_cart (product_id, cart_id, quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+                db_conn.commit()
+
+        return jsonify({"message": "Product added to the cart successfully"})
+
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Add to cart error: {e}"}), 500
+
+
+
+@app.route('/view_cart')
+def view_my_cart () :
+    data = request.json
+    client_email = data.get('client_email')
+    product_id = data.get('product_id')
+    cart_id = data.get('cart_id')
+    with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
+                product = cursor.fetchall()
+
+
 
 #OtherEndpoints..... 
 
