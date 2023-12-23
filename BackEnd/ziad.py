@@ -25,8 +25,8 @@ db_config = {
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'ziadmohned@gmail.com'
-app.config['MAIL_PASSWORD'] = 'owtn kowk ztqv coyt'
+app.config['MAIL_USERNAME'] = 'Info.Groceryshop@gmail.com'
+app.config['MAIL_PASSWORD'] = 'mkyg vojf mjjx mxst'
 mail = Mail(app)
 
 # Helper function to generate OTP
