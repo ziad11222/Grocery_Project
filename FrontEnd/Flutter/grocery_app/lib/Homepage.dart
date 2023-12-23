@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:grocery_app/profile.dart';
+import 'package:grocery_app/cart_screen.dart';
+import 'package:grocery_app/categories.dart';
 import 'package:persistent_bottom_nav_bar/persistent_tab_view.dart';
 import 'home.dart';
-import 'cart.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -45,15 +46,10 @@ class _HomePageState extends State<HomePage> {
                           title: 'Course',
                           activeColorPrimary: Colors.green,
                           activeColorSecondary: Colors.black,
-                          icon: Icon(Icons.book),
+                          icon: Icon(Icons.search),
                         ),
                        
-                        PersistentBottomNavBarItem(
-                            textStyle: TextStyle(color: Color(0xFFB8B8D2)),
-                            title: 'Account',
-                            activeColorPrimary: Colors.green,
-                            activeColorSecondary: Colors.black,
-                            icon: Icon(Icons.person))
+                        
                       ],
                       navBarStyle: NavBarStyle.style12,
                       screens: _widgetOptions),
@@ -65,7 +61,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
   List<Widget> _widgetOptions = <Widget>[
-    home(),cart(),profile()
+    home(),CategoriesScreen()
    
   ];
 }

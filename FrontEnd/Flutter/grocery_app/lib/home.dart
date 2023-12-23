@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_app/cart_screen.dart';
 import 'package:grocery_app/details.dart';
 import 'details.dart';
 
@@ -63,7 +64,12 @@ class _homeState extends State<home> {
                               width: 40,
                             ),
                             GestureDetector(
-                              onTap: () {},
+                              onTap: () { Navigator.push(context,
+                                                    MaterialPageRoute(
+                                                  builder: (context) {
+                                                    return CartScreen();
+                                                  },
+                                                ));},
                               child: Icon(
                                   size: 30,
                                   color: Colors.white,

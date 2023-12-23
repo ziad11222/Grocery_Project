@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'main.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:date_time_picker/date_time_picker.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -140,26 +141,26 @@ class _signupState extends State<signup> {
                                       fontSize: 10, color: Colors.grey),
                                   'Birth Date'),
                             ),
-                            Padding(
-                              padding:
+                            Padding(padding:
                                   const EdgeInsets.only(right: 50, left: 50),
-                              child: TextFormField(
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'enter yout birth data';
-                                  }
-                                },
-                                onChanged: (value) {
-                                  setState(() {
-                                    date = value;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                  hintText: 'b-date',
-                                  hintStyle: TextStyle(color: Colors.grey),
-                                ),
+                              child: DateTimePicker(validator: (value) {
+                                if(value!.isEmpty){
+                                  return 'enter your birth date';
+                                }
+                              },onChanged: (value) {
+                                date= value.toString();
+                              },decoration:InputDecoration(
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      hintText: 'date',
+                                      hintStyle: TextStyle(color: Colors.grey),
+                                      prefixIcon: Icon(Icons.event)) ,
+                                
+                                dateMask: 'yyyy-MM-dd',
+                                initialValue: '',
+                                firstDate: DateTime(1960),
+                                lastDate: DateTime(2100),
                               ),
                             ),
                             SizedBox(
