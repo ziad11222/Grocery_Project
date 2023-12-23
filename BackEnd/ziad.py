@@ -164,7 +164,7 @@ def forgot_password():
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({"error": "User not found"}), 404
+                return jsonify({"error": "Email not registered!"}), 404
 
             # Generate a unique token for password reset
             reset_token = generate_reset_token()
