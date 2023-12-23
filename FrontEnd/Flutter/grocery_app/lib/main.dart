@@ -196,7 +196,7 @@ class _loginpageState extends State<loginpage> {
       'password': password,
     };
     final http.Response response = await http.post(
-      Uri.parse('http://34.27.244.125/login'),
+      Uri.parse('http://34.31.110.154/login'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
@@ -208,7 +208,7 @@ class _loginpageState extends State<loginpage> {
     print('--------------------------------------------------------');
     print(response.body);
     String? message = map['message'];
-    image = map['user_data']['profile_image'];
+    
     String token = map['token'] ?? '';
     print(image);
     
