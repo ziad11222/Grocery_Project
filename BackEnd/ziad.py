@@ -46,7 +46,7 @@ def send_verification_email(email, verification_code):
 db_connection = mysql.connector.connect(**db_config)
 
 # Initialize MySQL connection pool
-db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **db_config)
+db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
 
 
 SECRET_KEY = secrets.token_hex(32)
@@ -177,17 +177,16 @@ def forgot_password():
             cursor.execute("UPDATE client SET reset_token = %s WHERE email = %s", (reset_token, email))
             db_connection.commit()
 
-            # Send an email with the password reset link
-            reset_link = url_for('reset_password', token=reset_token, _external=True)
+            # Send an email with the reset token
             msg = Message('Password Reset', sender='your_email@example.com', recipients=[email])
-            msg.body = f'Click on the following link to reset your password: {reset_link}'
+            msg.body = f'Your password reset token is: {reset_token}'
             mail.send(msg)
 
         return jsonify({"message": "Password reset instructions sent to your email"})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-
+    
 # Endpoint for handling password reset
 @app.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
