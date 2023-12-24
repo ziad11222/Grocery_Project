@@ -530,7 +530,33 @@ def view_my_cart () :
                 cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
                 product = cursor.fetchall()
 
+@app.route('/removeFromCart', methods=['POST'])
+def remove_from_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
 
+        if not all([client_email, product_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        # Remove the product from the cart
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+                               (client_email, product_id))
+                affected_rows = cursor.rowcount
+                db_conn.commit()
+
+                if affected_rows == 0:
+                    return jsonify({"error": "Product not found in the cart"}), 404
+
+        return jsonify({"message": "Product removed from the cart successfully"})
+
+    except IntegrityError as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
 
 #OtherEndpoints..... 
 
