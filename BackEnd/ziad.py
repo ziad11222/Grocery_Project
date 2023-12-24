@@ -515,16 +515,18 @@ def add_to_cart():
 
 
 
-@app.route('/view_cart')
-def view_my_cart () :
-    data = request.json
-    client_email = data.get('client_email')
-    product_id = data.get('product_id')
-    cart_id = data.get('cart_id')
+@app.route('/view_cart', methods=['GET'])
+def view_my_cart():
+    client_email = request.args.get('client_email')
+    #product_id = request.args.get('product_id')
+    cart_id = request.args.get('cart_id')
+    
     
     with db_connection.cursor(dictionary=True) as cursor:
-        cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
-        product = cursor.fetchall()
+        cursor.execute("SELECT product_cart.product_id, product_cart.product_quantity FROM product_cart INNER JOIN cart ON cart.id = product_cart.cart_id")
+        products = cursor.fetchall()
+
+    return jsonify({"products": products})
 
 
 
