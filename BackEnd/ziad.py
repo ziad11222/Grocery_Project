@@ -186,7 +186,7 @@ def forgot_password():
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-    
+        
 # Endpoint for handling password reset
 @app.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
