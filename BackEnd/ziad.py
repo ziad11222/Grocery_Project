@@ -177,17 +177,16 @@ def forgot_password():
             cursor.execute("UPDATE client SET reset_token = %s WHERE email = %s", (reset_token, email))
             db_connection.commit()
 
-            # Send an email with the password reset link
-            reset_link = url_for('reset_password', token=reset_token, _external=True)
+            # Send an email with the reset token
             msg = Message('Password Reset', sender='your_email@example.com', recipients=[email])
-            msg.body = f'Click on the following link to reset your password: {reset_link}'
+            msg.body = f'Your password reset token is: {reset_token}'
             mail.send(msg)
 
         return jsonify({"message": "Password reset instructions sent to your email"})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-
+    
 # Endpoint for handling password reset
 @app.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
@@ -488,7 +487,7 @@ def add_to_cart():
 
         def create_cart(client_email):
             with db_connection.cursor(dictionary=True) as cursor:
-                cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0) ON DUPLICATE KEY UPDATE client_email=client_email", (client_email,))
+                cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE client_email=client_email", (client_email,))
                 cart_id = cursor.lastrowid
                 db_connection.commit()
             return cart_id
@@ -504,6 +503,7 @@ def add_to_cart():
         
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("INSERT INTO product_cart (product_id, cart_id, quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+
             db_connection.commit()
 
         return jsonify({"message": "Product added to the cart successfully"})
