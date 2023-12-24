@@ -518,12 +518,31 @@ def add_to_cart():
 @app.route('/view_cart', methods=['GET'])
 def view_my_cart():
     client_email = request.args.get('client_email')
-    #product_id = request.args.get('product_id')
+    # product_id = request.args.get('product_id')  # Uncomment if needed
     cart_id = request.args.get('cart_id')
-    
-    
+
     with db_connection.cursor(dictionary=True) as cursor:
-        cursor.execute("SELECT product_cart.product_id, product_cart.product_quantity FROM product_cart INNER JOIN cart ON cart.id = product_cart.cart_id")
+        # Base query
+        query = "SELECT product_cart.product_id, product_cart.product_quantity FROM product_cart INNER JOIN cart ON cart.id = product_cart.cart_id"
+
+        # Conditions based on parameters
+        conditions = []
+        if client_email:
+            conditions.append("cart.client_email = %s")
+        # Uncomment if you want to filter by product_id
+        # if product_id:
+        #     conditions.append("product_cart.product_id = %s")
+        if cart_id:
+            conditions.append("cart.id = %s")
+
+        # Combine conditions into the query
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        # Execute the query with parameters
+        cursor.execute(query, (client_email, cart_id))
+
+        # Fetch the results
         products = cursor.fetchall()
 
     return jsonify({"products": products})
