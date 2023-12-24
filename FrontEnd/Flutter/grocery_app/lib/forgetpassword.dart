@@ -129,16 +129,22 @@ class _checkState extends State<check> {
               'Content-Type': 'application/json; charset=UTF-8',
             },
             body: jsonEncode(forgetData));
-    Map<String, dynamic> map = jsonDecode(response.body);
+    
     if (response.statusCode == 200) {
+      Map<String, dynamic> map = jsonDecode(response.body);
       Navigator.push(context, MaterialPageRoute(
         builder: (context) {
           return password();
         },
       ));
-    } else {
+    } else if (response.statusCode == 500){
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('User Not Found')));
+          .showSnackBar(SnackBar(backgroundColor: Colors.red,content: Text('Connection Error')));
+    }
+    else if (response.statusCode == 404){
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(backgroundColor:  Colors.red,content: Text('Email not registered!')));
+
     }
   }
 }

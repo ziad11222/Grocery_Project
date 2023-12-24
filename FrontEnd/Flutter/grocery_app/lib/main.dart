@@ -4,8 +4,7 @@ import 'forgetpassword.dart';
 import 'Homepage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -26,6 +25,7 @@ class _loginpageState extends State<loginpage> {
   var password;
   var response;
   var image;
+  bool isClosedeye =true;
   GlobalKey<FormState> KEY = GlobalKey<FormState>();
   @override
   Widget build(BuildContext context) {
@@ -142,8 +142,14 @@ class _loginpageState extends State<loginpage> {
                                       password = value;
                                     });
                                   },
-                                  obscureText: true,
-                                  decoration: InputDecoration(
+                                  obscureText: isClosedeye,
+                                  decoration: InputDecoration(suffixIcon: GestureDetector(onTap: () {
+                                  setState(() {
+                                    if(isClosedeye == true){isClosedeye = false;}
+                                    else{isClosedeye = true;}
+                                  }
+                                  );
+                                },child:  Icon(isClosedeye ? Icons.visibility_off : Icons.remove_red_eye),),
                                       border: OutlineInputBorder(
                                           borderRadius:
                                               BorderRadius.circular(10)),
@@ -202,24 +208,39 @@ class _loginpageState extends State<loginpage> {
       },
       body: jsonEncode(loginData),
     );
-    Map<String, dynamic> map = json.decode(response.body);
+    
     print('--------------------------------------------------------');
     print(response.statusCode);
     print('--------------------------------------------------------');
     print(response.body);
-    String? message = map['message'];
     
+    
+
+    
+    if (response.statusCode == 200) {
+      Map<String, dynamic> map = json.decode(response.body);
+      String? message = map['message'];
+
     String token = map['token'] ?? '';
-    print(image);
-    
     print(message);
-    if (message == 'Logged in successfully') {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (context) {
-          return HomePage();
-        },
-      ));
+      if (message == 'Logged in successfully') {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) {
+            return HomePage();
+          },
+        ));
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+      }
+     
     }
-    else print('user not found');
+    else if( response.statusCode == 401){
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(backgroundColor: Colors.red,content: Text('Wrong email or password')));
+    }
+     else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(backgroundColor: Colors.red,content: Text('Connection Error')));
+    }
   }
 }

@@ -1,7 +1,12 @@
+import 'dart:ffi';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:grocery_app/cart_screen.dart';
 import 'package:grocery_app/details.dart';
 import 'details.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -19,13 +24,25 @@ class home extends StatefulWidget {
 
 class _homeState extends State<home> {
   final FocusNode _focusNode = FocusNode();
+  Map<String, dynamic>? decodedToken;
+  String? image;
+  List<allproduct> products = [];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.green,
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
+          child: _widget(),
+        ),
+      ),
+    );
+  }
+ Widget _widget(){
+  if(products.isEmpty || products == null){
+    return CircularProgressIndicator();
+  }
+  else {return SingleChildScrollView(
             child:
                 Column(mainAxisAlignment: MainAxisAlignment.start, children: [
               Container(
@@ -42,8 +59,9 @@ class _homeState extends State<home> {
                             ),
                             CircleAvatar(
                                 radius: 30,
-                                backgroundImage: NetworkImage(
-                                    'https://imageio.forbes.com/specials-images/imageserve/61688aa1d4a8658c3f4d8640/Antonio-Juliano/0x0.jpg?format=jpg&width=960')),
+                                backgroundImage: NetworkImage(image == null
+                                    ? 'https://imageio.forbes.com/specials-images/imageserve/61688aa1d4a8658c3f4d8640/Antonio-Juliano/0x0.jpg?format=jpg&width=960'
+                                    : '$image')),
                             SizedBox(
                               width: 30,
                             ),
@@ -64,12 +82,13 @@ class _homeState extends State<home> {
                               width: 40,
                             ),
                             GestureDetector(
-                              onTap: () { Navigator.push(context,
-                                                    MaterialPageRoute(
-                                                  builder: (context) {
-                                                    return CartScreen();
-                                                  },
-                                                ));},
+                              onTap: () {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (context) {
+                                    return CartScreen();
+                                  },
+                                ));
+                              },
                               child: Icon(
                                   size: 30,
                                   color: Colors.white,
@@ -140,23 +159,25 @@ class _homeState extends State<home> {
                       child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemBuilder: (context, index) {
-                            return GestureDetector(onTap:() {
-                               Navigator.push(context, MaterialPageRoute(
-                                    builder: (context) {
-                                      return details();
-                                    },
-                                  ));
-                            }, 
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (context) {
+                                    return details();
+                                  },
+                                ));
+                              },
                               child: Container(
                                 width: 200,
                                 decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(10),
                                     color: Colors.white),
                                 child: Padding(
-                                  padding:
-                                      EdgeInsets.only(top: 3, right: 3, left: 3),
+                                  padding: EdgeInsets.only(
+                                      top: 3, right: 3, left: 3),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(10),
@@ -180,7 +201,8 @@ class _homeState extends State<home> {
                                       ),
                                       Text(
                                           style: TextStyle(
-                                              fontSize: 12, color: Colors.black),
+                                              fontSize: 12,
+                                              color: Colors.black),
                                           "fresh fruit 2KG"),
                                       Row(
                                         children: [
@@ -200,7 +222,8 @@ class _homeState extends State<home> {
                                                 color: Colors.green),
                                             child: Icon(
                                                 color: Colors.white,
-                                                Icons.add_shopping_cart_rounded),
+                                                Icons
+                                                    .add_shopping_cart_rounded),
                                           )
                                         ],
                                       )
@@ -210,12 +233,12 @@ class _homeState extends State<home> {
                               ),
                             );
                           },
-                          separatorBuilder: (context, index) {
+                          separatorBuilder: (context, int i) {
                             return SizedBox(
                               width: 10,
                             );
                           },
-                          itemCount: 5),
+                          itemCount: 10),
                     ),
                     Row(
                       children: [
@@ -230,7 +253,8 @@ class _homeState extends State<home> {
                     ListView.separated(
                         physics: NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
-                        itemBuilder: (context, index) {
+                        itemBuilder: (context, int i) {
+                          int item = i *2;
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -260,7 +284,7 @@ class _homeState extends State<home> {
                                           child: Image.network(
                                             height: 150,
                                             width: 300,
-                                            'https://nakaseromarket.ug/wp-content/uploads/2020/03/Mangoes.jpg',
+                                            '${products[item].image}',
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -271,7 +295,7 @@ class _homeState extends State<home> {
                                             style: TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.bold),
-                                            'item title'),
+                                            '${products[item].name}'),
                                         SizedBox(
                                           height: 3,
                                         ),
@@ -279,14 +303,14 @@ class _homeState extends State<home> {
                                             style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.black),
-                                            "fresh fruit 2KG"),
+                                            "${products[item].brand}"),
                                         Row(
                                           children: [
                                             Text(
                                                 style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     color: Colors.green),
-                                                "\$200"),
+                                                "\$${products[item].price}"),
                                             SizedBox(
                                               width: 110,
                                             ),
@@ -308,13 +332,14 @@ class _homeState extends State<home> {
                                   ),
                                 ),
                               ),
-                              GestureDetector(onTap: () {
-                                Navigator.push(context, MaterialPageRoute(
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(
                                     builder: (context) {
                                       return details();
                                     },
                                   ));
-                              },
+                                },
                                 child: Container(
                                   width: 190,
                                   decoration: BoxDecoration(
@@ -328,11 +353,12 @@ class _homeState extends State<home> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                           child: Image.network(
                                             height: 150,
                                             width: 300,
-                                            'https://img.freepik.com/premium-photo/bananas-branch-shelf-store-shopping-concept_259348-3901.jpg',
+                                            '${products[item+1].image}',
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -343,7 +369,7 @@ class _homeState extends State<home> {
                                             style: TextStyle(
                                                 fontSize: 17,
                                                 fontWeight: FontWeight.bold),
-                                            'item title'),
+                                            '${products[item+1].name}'),
                                         SizedBox(
                                           height: 3,
                                         ),
@@ -351,14 +377,14 @@ class _homeState extends State<home> {
                                             style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.black),
-                                            "fresh fruit 2KG"),
+                                            "${products[item+1].brand}"),
                                         Row(
                                           children: [
                                             Text(
                                                 style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     color: Colors.green),
-                                                "\$200"),
+                                                "\$${products[item+1].price}"),
                                             SizedBox(
                                               width: 110,
                                             ),
@@ -388,7 +414,7 @@ class _homeState extends State<home> {
                             height: 10,
                           );
                         },
-                        itemCount: 5),
+                        itemCount: 10),
                     SizedBox(
                       height: 20,
                     )
@@ -396,9 +422,63 @@ class _homeState extends State<home> {
                 ),
               )
             ]),
-          ),
-        ),
-      ),
-    );
+          );}
+ } 
+
+  @override
+  void initState() {
+    getData();
+    get_homepage();
+  }
+
+  getData() async {
+    String? token;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('token');
+    Map<String, dynamic>? decodedToken = Jwt.parseJwt(token ?? '');
+    if (decodedToken != null) {
+      setState(() {
+        image = decodedToken['profile_image'];
+      });
+    }
+  }
+
+  Future<void> get_homepage() async {
+    http.Response response =
+        await http.get(Uri.parse('http://34.31.110.154/getAllProduct'));
+        List list = json.decode(response.body);
+        print('----------------------------------------------------------');
+        print(list);
+        print('----------------------------------------------------------');
+        print(list.length);
+        print('----------------------------------------------------------');
+        setState(() {
+          for(int i = 0; i< list.length ; i++  ){
+          allproduct Allproduct = allproduct.fromjson(list[i]);
+          products.add(Allproduct);
+
+        }
+        });
+         print('----------------------------------------------------------');
+        print(products[0].image);
+    print('----------------------------------------------------------');
+  }
+}
+class allproduct {
+  String? name;
+  String? brand;
+  int? price;
+  String? image;
+ 
+  allproduct.fromjson(Map<String, dynamic> list) {
+    name= list['product_name'];
+    brand= list['brand'];
+    price= list['price'];
+    image= list['image'];
+   
+
+
+
+
   }
 }
