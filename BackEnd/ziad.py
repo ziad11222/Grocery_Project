@@ -45,6 +45,10 @@ def send_verification_email(email, verification_code):
 # Initialize MySQL connection pool
 db_connection = mysql.connector.connect(**db_config)
 
+# Initialize MySQL connection pool
+db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
+
+
 SECRET_KEY = secrets.token_hex(32)
 
 # Endpoint for user login
@@ -173,17 +177,16 @@ def forgot_password():
             cursor.execute("UPDATE client SET reset_token = %s WHERE email = %s", (reset_token, email))
             db_connection.commit()
 
-            # Send an email with the password reset link
-            reset_link = url_for('reset_password', token=reset_token, _external=True)
+            # Send an email with the reset token
             msg = Message('Password Reset', sender='your_email@example.com', recipients=[email])
-            msg.body = f'Click on the following link to reset your password: {reset_link}'
+            msg.body = f'Your password reset token is: {reset_token}'
             mail.send(msg)
 
         return jsonify({"message": "Password reset instructions sent to your email"})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-
+    
 # Endpoint for handling password reset
 @app.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
@@ -526,8 +529,89 @@ def view_my_cart () :
                 cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
                 product = cursor.fetchall()
 
+@app.route('/removeFromCart', methods=['POST'])
+def remove_from_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
 
+        if not all([client_email, product_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
 
+        # Remove the product from the cart
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+                               (client_email, product_id))
+                affected_rows = cursor.rowcount
+                db_conn.commit()
+
+                if affected_rows == 0:
+                    return jsonify({"error": "Product not found in the cart"}), 404
+
+        return jsonify({"message": "Product removed from the cart successfully"})
+
+    except IntegrityError as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
+
+@app.route('/confirmOrders', methods=['POST'])
+def confirm_orders():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        cart_id = data.get('cart_id')
+        payment_method_id = data.get('payment_method_id')
+
+        # Validate input parameters
+        if not all([client_email, cart_id, payment_method_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        with db_connection.get_connection() as db_conn:
+            with db_conn.cursor(dictionary=True) as cursor:
+                # Check if the cart is not empty
+                cursor.execute("SELECT * FROM product_cart WHERE cart_id = %s", (cart_id,))
+                cart_items = cursor.fetchall()
+
+                if not cart_items:
+                    return jsonify({"error": "Cart is empty. Add products before confirming the order"}), 400
+
+                # Calculate the total price of the order
+                cursor.execute("SELECT SUM(product.price * product_cart.product_quantity) AS total_price "
+                               "FROM product_cart "
+                               "INNER JOIN product ON product_cart.product_id = product.id "
+                               "WHERE product_cart.cart_id = %s", (cart_id,))
+                total_price_result = cursor.fetchone()
+                total_price = total_price_result['total_price'] if total_price_result['total_price'] else 0
+
+                # Insert the order into the orders table
+                cursor.execute(
+                    "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
+                    "VALUES (%s, %s, %s, %s, NOW())",
+                    (client_email, cart_id, payment_method_id, total_price)
+                )
+                order_id = cursor.lastrowid
+
+                # Move products from the cart to the product_order table
+                cursor.execute(
+                    "INSERT INTO product_order (product_id, order_id, product_quantity) "
+                    "SELECT product_id, %s, product_quantity FROM product_cart WHERE cart_id = %s",
+                    (order_id, cart_id)
+                )
+
+                # Clear the cart
+                cursor.execute("DELETE FROM product_cart WHERE cart_id = %s", (cart_id,))
+
+                db_conn.commit()
+
+        return jsonify({"message": "Order confirmed successfully", "order_id": order_id})
+
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Confirm orders error: {e}"}), 500
 #OtherEndpoints..... 
 
 
