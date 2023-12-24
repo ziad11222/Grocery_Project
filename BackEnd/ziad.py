@@ -45,6 +45,10 @@ def send_verification_email(email, verification_code):
 # Initialize MySQL connection pool
 db_connection = mysql.connector.connect(**db_config)
 
+# Initialize MySQL connection pool
+db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=5, **db_config)
+
+
 SECRET_KEY = secrets.token_hex(32)
 
 # Endpoint for user login
