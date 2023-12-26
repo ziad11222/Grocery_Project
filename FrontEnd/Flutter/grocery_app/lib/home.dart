@@ -26,6 +26,7 @@ class _homeState extends State<home> {
   
   Map<String, dynamic>? decodedToken;
   String? image;
+  String? name;
   List<allproduct> products = [];
   @override
   Widget build(BuildContext context) {
@@ -55,7 +56,7 @@ class _homeState extends State<home> {
                         Row(
                           children: [
                             SizedBox(
-                              width: 20,
+                              width: 1,
                             ),
                             CircleAvatar(
                                 radius: 30,
@@ -70,9 +71,9 @@ class _homeState extends State<home> {
                                 Text(
                                     style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 30,
+                                        fontSize: 28,
                                         fontWeight: FontWeight.bold),
-                                    'Welcome'),
+                                    'Welcome ${name}!'),
                                 Text(
                                     style: TextStyle(color: Colors.white),
                                     'What do you want to Buy?'),
@@ -421,6 +422,7 @@ class _homeState extends State<home> {
     if (decodedToken != null) {
       setState(() {
         image = decodedToken['profile_image'];
+        name = decodedToken['username'];
       });
     }
   }
