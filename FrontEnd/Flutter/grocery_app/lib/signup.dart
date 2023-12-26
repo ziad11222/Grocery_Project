@@ -328,14 +328,18 @@ class _signupState extends State<signup> {
         body: jsonEncode(signup_data));
     Map<String, dynamic> map = jsonDecode(response.body);
     if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(backgroundColor: Colors.green,content: Text('Account Created')));
       Navigator.push(context, MaterialPageRoute(
         builder: (context) {
           return loginpage();
+          
         },
       ));
     } else {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Status code Not 200')));
+          .showSnackBar(SnackBar(backgroundColor: Colors.red,content: Text('Connection Error')));
+          print(response.statusCode);
     }
   }
 }
