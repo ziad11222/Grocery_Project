@@ -408,15 +408,12 @@ def filter_by_price():
     price_from = request.args.get('from')
     price_to = request.args.get('to')
 
-    
     with db_connection.cursor(dictionary=True) as cursor:
         query = "SELECT * FROM product WHERE price BETWEEN %s AND %s"
         cursor.execute(query,(price_from, price_to))
         products = cursor.fetchall()
 
     return jsonify(products)
-
-
 
 
 @app.route('/filterByBrand', methods=['GET'])
@@ -516,36 +513,52 @@ def add_to_cart():
 
 
 @app.route('/view_cart', methods=['GET'])
-def view_my_cart():
-    client_email = request.args.get('client_email')
-    # product_id = request.args.get('product_id')  # Uncomment if needed
-    cart_id = request.args.get('cart_id')
+def view_cart():
+    try:
+        client_email = request.args.get('client_email')
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("""
+                SELECT
+                    product.id,
+                    product.product_name,
+                    product.price,
+                    product_cart.quantity
+                FROM
+                    product_cart
+                INNER JOIN
+                    product ON product_cart.product_id = product.id
+                INNER JOIN
+                    cart ON product_cart.cart_id = cart.id
+                WHERE
+                    cart.client_email = %s
+            """, (client_email,))
 
-    with db_connection.cursor(dictionary=True) as cursor:
-        # Base query
-        query = "SELECT product_cart.product_id, product_cart.product_quantity FROM product_cart INNER JOIN cart ON cart.id = product_cart.cart_id"
+            cart_items = cursor.fetchall() 
 
-        # Conditions based on parameters
-        conditions = []
-        if client_email:
-            conditions.append("cart.client_email = %s")
-        # Uncomment if you want to filter by product_id
-        # if product_id:
-        #     conditions.append("product_cart.product_id = %s")
-        if cart_id:
-            conditions.append("cart.id = %s")
+        if not cart_items:
+            return jsonify({"message": "No items found in the cart"}), 404
 
-        # Combine conditions into the query
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+        return jsonify(cart_items)
 
-        # Execute the query with parameters
-        cursor.execute(query, (client_email, cart_id))
+    except Error as e:
+        return jsonify({"error": f"View cart error: {e}"}), 500
 
-        # Fetch the results
-        products = cursor.fetchall()
+    
+@app.route('/discounted_products', methods=['GET'])
+def discounted_products():
+    try:
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE discount > 0")
+            discounted_products = cursor.fetchall()
 
-    return jsonify({"products": products})
+        if not discounted_products:
+            return jsonify({"message": "No products with discount found"}), 404
+
+        return jsonify(discounted_products)
+
+    except Error as e:
+        return jsonify({"error": f"Discounted products error: {e}"}), 500
+
 
 @app.route('/removeFromCart', methods=['POST'])
 def remove_from_cart():
@@ -617,7 +630,7 @@ def confirm_orders():
             # Clear the cart
             cursor.execute("DELETE FROM product_cart WHERE cart_id = %s", (cart_id,))
 
-            db_conn.commit()
+            db_connection.commit()
 
         return jsonify({"message": "Order confirmed successfully", "order_id": order_id})
 
