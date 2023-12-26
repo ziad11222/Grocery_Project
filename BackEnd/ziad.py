@@ -516,6 +516,7 @@ def add_to_cart():
 def view_cart():
     try:
         client_email = request.args.get('client_email')
+
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("""
                 SELECT
