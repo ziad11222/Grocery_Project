@@ -23,7 +23,7 @@ class home extends StatefulWidget {
 }
 
 class _homeState extends State<home> {
-  final FocusNode _focusNode = FocusNode();
+  
   Map<String, dynamic>? decodedToken;
   String? image;
   List<allproduct> products = [];
@@ -99,25 +99,7 @@ class _homeState extends State<home> {
                         SizedBox(
                           height: 10,
                         ),
-                        Padding(
-                          padding: EdgeInsets.only(left: 20, right: 20),
-                          child: TextFormField(
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white60.withOpacity(1),
-                              hintStyle: TextStyle(color: Colors.grey),
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide.none,
-                                  borderRadius: BorderRadius.circular(25)),
-                              hintText: 'Search here...',
-                              prefixIcon:
-                                  Icon(color: Colors.black, Icons.search),
-                            ),
-                            onChanged: (value) {
-                              setState(() {});
-                            },
-                          ),
-                        )
+                        
                       ]),
                   decoration: BoxDecoration(color: Colors.green)),
               SizedBox(
