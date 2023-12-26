@@ -408,15 +408,12 @@ def filter_by_price():
     price_from = request.args.get('from')
     price_to = request.args.get('to')
 
-    
     with db_connection.cursor(dictionary=True) as cursor:
         query = "SELECT * FROM product WHERE price BETWEEN %s AND %s"
         cursor.execute(query,(price_from, price_to))
         products = cursor.fetchall()
 
     return jsonify(products)
-
-
 
 
 @app.route('/filterByBrand', methods=['GET'])
@@ -515,18 +512,132 @@ def add_to_cart():
 
 
 
-@app.route('/view_cart')
-def view_my_cart () :
-    data = request.json
-    client_email = data.get('client_email')
-    product_id = data.get('product_id')
-    cart_id = data.get('cart_id')
+@app.route('/view_cart', methods=['GET'])
+def view_cart():
+    try:
+        client_email = request.args.get('client_email')
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("""
+                SELECT
+                    product.id,
+                    product.product_name,
+                    product.price,
+                    product_cart.quantity
+                FROM
+                    product_cart
+                INNER JOIN
+                    product ON product_cart.product_id = product.id
+                INNER JOIN
+                    cart ON product_cart.cart_id = cart.id
+                WHERE
+                    cart.client_email = %s
+            """, (client_email,))
+
+            cart_items = cursor.fetchall() 
+
+        if not cart_items:
+            return jsonify({"message": "No items found in the cart"}), 404
+
+        return jsonify(cart_items)
+
+    except Error as e:
+        return jsonify({"error": f"View cart error: {e}"}), 500
+
     
-    with db_connection.cursor(dictionary=True) as cursor:
-        cursor.execute("SELECT product_cart.product_id , product_cart.product_quantity FROM product_cart INNER JOIN cart   on  cart.id = product_cart.cart_id ")
-        product = cursor.fetchall()
+@app.route('/discounted_products', methods=['GET'])
+def discounted_products():
+    try:
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM product WHERE discount > 0")
+            discounted_products = cursor.fetchall()
+
+        if not discounted_products:
+            return jsonify({"message": "No products with discount found"}), 404
+
+        return jsonify(discounted_products)
+
+    except Error as e:
+        return jsonify({"error": f"Discounted products error: {e}"}), 500
 
 
+@app.route('/removeFromCart', methods=['POST'])
+def remove_from_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+        if not all([client_email, product_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+        # Remove the product from the cart
+        
+        with db_connection.cursor(dictionary=True) as cursor:
+            cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+                            (client_email, product_id))
+            affected_rows = cursor.rowcount
+            db_connection.commit()
+            if affected_rows == 0:
+                return jsonify({"error": "Product not found in the cart"}), 404
+        return jsonify({"message": "Product removed from the cart successfully"})
+    except IntegrityError as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Remove from cart error: {e}"}), 500
+
+@app.route('/confirmOrders', methods=['POST'])
+def confirm_orders():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        cart_id = data.get('cart_id')
+        payment_method_id = data.get('payment_method_id')
+
+        # Validate input parameters
+        if not all([client_email, cart_id, payment_method_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        
+        with db_connection.cursor(dictionary=True) as cursor:
+            # Check if the cart is not empty
+            cursor.execute("SELECT * FROM product_cart WHERE cart_id = %s", (cart_id,))
+            cart_items = cursor.fetchall()
+
+            if not cart_items:
+                return jsonify({"error": "Cart is empty. Add products before confirming the order"}), 400
+
+            # Calculate the total price of the order
+            cursor.execute("SELECT SUM(product.price * product_cart.product_quantity) AS total_price "
+                            "FROM product_cart "
+                            "INNER JOIN product ON product_cart.product_id = product.id "
+                            "WHERE product_cart.cart_id = %s", (cart_id,))
+            total_price_result = cursor.fetchone()
+            total_price = total_price_result['total_price'] if total_price_result['total_price'] else 0
+
+            # Insert the order into the orders table
+            cursor.execute(
+                "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
+                "VALUES (%s, %s, %s, %s, NOW())",
+                (client_email, cart_id, payment_method_id, total_price)
+            )
+            order_id = cursor.lastrowid
+
+            # Move products from the cart to the product_order table
+            cursor.execute(
+                "INSERT INTO product_order (product_id, order_id, product_quantity) "
+                "SELECT product_id, %s, product_quantity FROM product_cart WHERE cart_id = %s",
+                (order_id, cart_id)
+            )
+
+            # Clear the cart
+            cursor.execute("DELETE FROM product_cart WHERE cart_id = %s", (cart_id,))
+
+            db_connection.commit()
+
+        return jsonify({"message": "Order confirmed successfully", "order_id": order_id})
+
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Confirm orders error: {e}"}), 500
 
 #OtherEndpoints..... 
 
