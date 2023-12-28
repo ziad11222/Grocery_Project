@@ -36,16 +36,16 @@ class _HomePageState extends State<HomePage> {
                       items: [
                         PersistentBottomNavBarItem(
                           textStyle: TextStyle(color: Color(0xFFB8B8D2)),
-                          activeColorPrimary: Colors.green,
-                          activeColorSecondary: Colors.black,
+                          activeColorPrimary: Colors.black,
+                          activeColorSecondary: Colors.green,
                           title: 'Home',
                           icon: Icon(Icons.home_filled),
                         ),
                         PersistentBottomNavBarItem(
                           textStyle: TextStyle(color: Color(0xFFB8B8D2)),
                           title: 'Course',
-                          activeColorPrimary: Colors.green,
-                          activeColorSecondary: Colors.black,
+                          activeColorPrimary: Colors.black,
+                          activeColorSecondary: Colors.green,
                           icon: Icon(Icons.search),
                         ),
                        

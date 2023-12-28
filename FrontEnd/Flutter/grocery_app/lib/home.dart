@@ -27,6 +27,7 @@ class _homeState extends State<home> {
   String? image;
   String? name;
   List<allproduct> products = [];
+  List<allproduct> discounts = [];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,8 +41,8 @@ class _homeState extends State<home> {
   }
 
   Widget _widget() {
-    if (products.isEmpty || products == null) {
-      return CircularProgressIndicator();
+    if (products.isEmpty || products == null || discounts.isEmpty || discounts == null) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()),);
     } else {
       return SingleChildScrollView(
         child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
@@ -52,11 +53,10 @@ class _homeState extends State<home> {
                     SizedBox(
                       height: 20,
                     ),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        SizedBox(
-                          width: 1,
-                        ),
+                        
                         Column(
                           children: [
                             CircleAvatar(
@@ -74,7 +74,7 @@ class _homeState extends State<home> {
                                 '$name')
                           ],
                         ),
-                        SizedBox(width: 20,),
+                        
                         Column(
                           children: [
                             Text(
@@ -88,7 +88,7 @@ class _homeState extends State<home> {
                                 'What do you want to Buy?'),
                           ],
                         ),
-                        SizedBox(width: 20,),
+                       
                         GestureDetector(
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(
@@ -144,10 +144,10 @@ class _homeState extends State<home> {
                   height: 10,
                 ),
                 SizedBox(
-                  height: 230,
+                  height: 260,
                   child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemBuilder: (context, index) {
+                      itemBuilder: (context, int i) {
                         return GestureDetector(
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(
@@ -157,7 +157,7 @@ class _homeState extends State<home> {
                             ));
                           },
                           child: Container(
-                            width: 200,
+                            width: 250,
                             decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
                                 color: Colors.white),
@@ -165,6 +165,8 @@ class _homeState extends State<home> {
                               padding:
                                   EdgeInsets.only(top: 3, right: 3, left: 3),
                               child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   ClipRRect(
@@ -172,35 +174,63 @@ class _homeState extends State<home> {
                                     child: Image.network(
                                       height: 150,
                                       width: 300,
-                                      'https://s.yimg.com/uu/api/res/1.2/5KxZMxNs4haV4ILfIq_6GA--~B/aD0yNzc1O3c9NDIwMDtzbT0xO2FwcGlkPXl0YWNoeW9u/http://media.zenfs.com/en_us/News/ap_webfeeds/ae4fd9d1ca814db587687a622c8b4ff4.jpg',
+                                      '${discounts[i].image}',
                                       fit: BoxFit.cover,
                                     ),
                                   ),
                                   SizedBox(
                                     height: 3,
                                   ),
-                                  Text(
-                                      style: TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold),
-                                      'item title'),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                            style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.bold),
+                                            '${discounts[i].name}'),
+                                      ),
+                                      Flexible(
+                                          child: Text(
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.bold),
+                                              textAlign: TextAlign.start,
+                                              '${discounts[i].discount}%')),
+                                    ],
+                                  ),
                                   SizedBox(
                                     height: 3,
                                   ),
                                   Text(
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.black),
-                                      "fresh fruit 2KG"),
+                                      "${discounts[i].brand}"),
                                   Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
+                                      RichText(
+                                        text: TextSpan(
+                                            style: TextStyle(
+                                                fontSize: 20,
+                                                decorationColor: Colors.red,
+                                                decorationThickness: 3,
+                                                decoration:
+                                                    TextDecoration.lineThrough,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green),
+                                            text: "\$${discounts[i].price}"),
+                                      ),
                                       Text(
                                           style: TextStyle(
+                                              fontSize: 20,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.green),
-                                          "\$200"),
-                                      SizedBox(
-                                        width: 120,
-                                      ),
+                                              color: Colors.red),
+                                          '\$${discounts[i].newPrice}'),
                                       Container(
                                         padding: EdgeInsets.all(5),
                                         decoration: BoxDecoration(
@@ -224,7 +254,7 @@ class _homeState extends State<home> {
                           width: 10,
                         );
                       },
-                      itemCount: 10),
+                      itemCount: discounts.length),
                 ),
                 Row(
                   children: [
@@ -408,6 +438,7 @@ class _homeState extends State<home> {
   void initState() {
     getData();
     get_homepage();
+    get_discounts();
   }
 
   getData() async {
@@ -426,21 +457,31 @@ class _homeState extends State<home> {
   Future<void> get_homepage() async {
     http.Response response =
         await http.get(Uri.parse('http://34.31.110.154/getAllProduct'));
-    List list = json.decode(response.body);
-    print('----------------------------------------------------------');
-    print(list);
-    print('----------------------------------------------------------');
-    print(list.length);
-    print('----------------------------------------------------------');
+    if(response.statusCode == 200){
+      List list = json.decode(response.body);
+   
     setState(() {
       for (int i = 0; i < list.length; i++) {
         allproduct Allproduct = allproduct.fromjson(list[i]);
         products.add(Allproduct);
       }
     });
-    print('----------------------------------------------------------');
-    print(products[0].image);
-    print('----------------------------------------------------------');
+    }
+   
+  }
+
+  Future<void> get_discounts() async {
+    http.Response response =
+        await http.get(Uri.parse('http://34.31.110.154/discounted_products'));
+    if(response.statusCode == 200){
+      List list = json.decode(response.body);
+    setState(() {
+      for (int i = 0; i < list.length; i++) {
+        allproduct Discounted_products = allproduct.fromjson(list[i]);
+        discounts.add(Discounted_products);
+      }
+    });
+    }
   }
 }
 
@@ -449,11 +490,15 @@ class allproduct {
   String? brand;
   int? price;
   String? image;
+  String? newPrice;
+  int? discount;
 
   allproduct.fromjson(Map<String, dynamic> list) {
     name = list['product_name'];
     brand = list['brand'];
     price = list['price'];
     image = list['image'];
+    newPrice = list['new_price'];
+    discount = list['discount'];
   }
 }

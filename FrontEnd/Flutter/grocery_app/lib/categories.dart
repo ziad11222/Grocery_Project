@@ -453,12 +453,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     List list = json.decode(response.body);
     setState(() {
       Set<String> uniqueNationalities = Set<String>();
+      Set<String> uniqueBrands = Set<String>();
       uniqueNationalities.add('Nationality');
+      uniqueBrands.add('Brand');
       for (int i = 0; i < list.length; i++) {
-        brands.add(list[i]['brand']);
+        
         uniqueNationalities.add(list[i]['nationality']);
+        uniqueBrands.add(list[i]['Brand']);
       }
       nations = List<String>.from(uniqueNationalities);
+      brands = List<String>.from(uniqueBrands);
     });
   }
 
