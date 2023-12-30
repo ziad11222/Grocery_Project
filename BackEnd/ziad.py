@@ -604,6 +604,42 @@ def remove_from_cart():
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
     except Exception as e:
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
+    
+@app.route('/decreaseProductQuantityInCart', methods=['POST'])
+def decrease_product_quantity_in_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+
+        # Check if the required parameters are present in the request
+        if not all([client_email, product_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        # Decrease the quantity of the specified product in the cart by 1
+        with db_connection.cursor(dictionary=True) as cursor:
+            # Decrease the quantity, and ensure it does not go below 0
+            cursor.execute(
+                "UPDATE product_cart SET quantity = GREATEST(quantity - 1, 0) WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+                (client_email, product_id))
+            db_connection.commit()
+
+            # Check if the product was found in the cart
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Product not found in the cart"}), 404
+
+            # Check if the quantity has become zero and remove the product from the cart
+            cursor.execute(
+                "DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s AND quantity = 0",
+                (client_email, product_id))
+            db_connection.commit()
+
+        return jsonify({"message": "Product quantity in the cart decreased successfully"})
+
+    except IntegrityError as e:
+        return jsonify({"error": f"Decrease product quantity in cart error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Decrease product quantity in cart error: {e}"}), 500
 
 @app.route('/confirmOrders', methods=['POST'])
 def confirm_orders():
