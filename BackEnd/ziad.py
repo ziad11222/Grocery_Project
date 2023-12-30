@@ -468,12 +468,21 @@ def add_to_cart():
         data = request.json
         client_email = data.get('client_email')
         product_id = data.get('product_id')
-        cart_id = data.get('cart_id')
+        #cart_id = data.get('cart_id')
         quantity = data.get('quantity')
 
         # Validate input parameters
         if not all([client_email, product_id, quantity]):
             return jsonify({"error": "Invalid request parameters"}), 400
+        
+        cart_id= get_cart_id(client_email)
+
+        def get_cart_id(client_email):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT id FROM cart WHERE client_email = %s", (client_email,))
+                id = cursor.fetchone()
+                return id 
+
 
         def is_product_available(product_id, requested_quantity):
             
@@ -497,11 +506,22 @@ def add_to_cart():
             cart_id = create_cart(client_email)
 
         # Insert the product into the cart
-        
-        with db_connection.cursor(dictionary=True) as cursor:
-            cursor.execute("INSERT INTO product_cart (product_id, cart_id, quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+        def is_in_cart(product_id, cart_id):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT EXISTS(SELECT * FROM product_cart WHERE product_id = %s AND cart_id = %s)", (product_id, cart_id))
+                result = cursor.fetchone()
+                return bool(result[0])
 
-            db_connection.commit()
+        if is_in_cart(product_id, cart_id):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("UPDATE product_cart SET product_quantity = product_quantity + %s WHERE product_id = %s AND cart_id = %s", (quantity, product_id, cart_id))
+                db_connection.commit()
+        else:
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("INSERT INTO product_cart (product_id, cart_id, product_quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+                db_connection.commit()
+
+
 
         return jsonify({"message": "Product added to the cart successfully"})
 
