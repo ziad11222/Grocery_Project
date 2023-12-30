@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'details.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'details_page.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({Key? key}) : super(key: key);
@@ -166,7 +166,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                   },
                                     decoration: InputDecoration(
                                         hintStyle: TextStyle(fontSize: 12),
-                                        hintText: 'Price 1 '),
+                                        hintText: 'From '),
                                   )),
                               SizedBox(
                                 width: 30,
@@ -187,7 +187,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                   },
                                     decoration: InputDecoration(
                                         hintStyle: TextStyle(fontSize: 12),
-                                        hintText: 'Price 2'),
+                                        hintText: 'To'),
                                   ))
                             ],
                           )
@@ -250,7 +250,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             return GestureDetector(
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return details();
+                    return DetailPage();
                   }));
                 },
                 child: Stack(
@@ -337,7 +337,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             return GestureDetector(
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return details();
+                    return DetailPage();
                   }));
                 },
                 child: Stack(
@@ -459,7 +459,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       for (int i = 0; i < list.length; i++) {
         
         uniqueNationalities.add(list[i]['nationality']);
-        uniqueBrands.add(list[i]['Brand']);
+        uniqueBrands.add(list[i]['brand']);
       }
       nations = List<String>.from(uniqueNationalities);
       brands = List<String>.from(uniqueBrands);

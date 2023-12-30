@@ -1,72 +1,129 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter_iconly/flutter_iconly.dart';
-import 'cart_widget.dart';
-class CartScreen extends StatelessWidget{
-  const CartScreen({Key? key}) : super(key: key);
+
+class CartScreen extends StatefulWidget {
+  const CartScreen({super.key});
 
   @override
-  Widget build(BuildContext context){
-    return  Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.black,
-        title: Text('Cart(2)'),
-        actions: [
-        IconButton(onPressed: (){}, icon: Icon(
-          IconlyBroken.delete,
-          color: Colors.red,
-        ),),
+  State<CartScreen> createState() => _CartScreenState();
+}
 
-      ]),
-      body: Column(
-        children: [
-          _checkout(),
-          Expanded(
-            child: ListView.builder(
-              itemCount: 10,
-                itemBuilder: (ctx,index){
-                return CartWidget();
-              },),
+class _CartScreenState extends State<CartScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          elevation: 0,
+          leading: GestureDetector(
+            onTap: () {},
+            child: Icon(color: Colors.black, Icons.arrow_back_ios_outlined),
           ),
-        ],
-      ),
-    );
-  }
-  Widget _checkout(){
-   return SizedBox(
-            width: double.infinity,
-            height: 100,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal:12),
-              child: Row(
-                children: [
-                  Material(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(10),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () {},
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text('Order Now', 
-                        style: TextStyle(
-                          fontSize: 20
-                        ),),
-                      ),
+          backgroundColor: Colors.white,
+          title: Text(
+              style:
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              'Cart'),
+          centerTitle: true,
+        ),
+        body: Container(
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 30,
+                    ),
+                    ListView.separated(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, int i) {
+                          return Row(
+                            children: [
+                              Image.network(
+                                  height: 100,
+                                  'https://cdn.loveandlemons.com/wp-content/uploads/2020/01/oat-milk-778x1024.jpg'),
+                              SizedBox(
+                                width: 20,
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold),
+                                      'item name'),
+                                  Text(
+                                      style: TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold),
+                                      '\$20')
+                                ],
+                              ),
+                              SizedBox(
+                                width: 50,
+                              ),
+                              Container(
+                                padding: EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle),
+                                child: Icon(color: Colors.white, Icons.remove),
+                              ),
+                              SizedBox(
+                                width: 15,
+                              ),
+                              Text(
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20),
+                                  '5'),
+                              SizedBox(
+                                width: 15,
+                              ),
+                              Container(
+                                padding: EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle),
+                                child: Icon(color: Colors.white, Icons.add),
+                              )
+                            ],
+                          );
+                        },
+                        separatorBuilder: (context, int i) {
+                          return Divider();
+                        },
+                        itemCount: 5),
+                    SizedBox(
+                      height: 130,
                     )
-                  ),
-                  const Spacer(),
-                  FittedBox(
-                    child: Text('Total: \$222',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 20,
-                    ),),
-                  )
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
+              Positioned(
+                bottom: 10,
+                left: 10,
+                right: 10,
+                child: SizedBox(
+                  width: 300,
+                  height: 50,
+                  child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50))),
+                      onPressed: () {
+                        setState(() {});
+                      },
+                      child: Text('Checkout')),
+                ),
+              )
+            ],
+          ),
+        ));
   }
 }

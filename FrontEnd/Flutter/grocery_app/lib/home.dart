@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:grocery_app/cart_screen.dart';
-import 'package:grocery_app/details.dart';
-import 'details.dart';
+import 'details_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decode/jwt_decode.dart';
+import 'package:persistent_bottom_nav_bar/persistent-tab-view.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -27,7 +27,7 @@ class _homeState extends State<home> {
   String? image;
   String? name;
   List<allproduct> products = [];
-  List<allproduct> discounts = [];
+  List<discount__products> discounts = [];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +41,7 @@ class _homeState extends State<home> {
   }
 
   Widget _widget() {
-    if (products.isEmpty || products == null || discounts.isEmpty || discounts == null) {
+    if (products.isEmpty || products == null || discounts.isEmpty || discounts == null ) {
       return Scaffold(body: Center(child: CircularProgressIndicator()),);
     } else {
       return SingleChildScrollView(
@@ -55,7 +55,7 @@ class _homeState extends State<home> {
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
+                      children: [SizedBox(width: 1,),
                         
                         Column(
                           children: [
@@ -91,18 +91,18 @@ class _homeState extends State<home> {
                        
                         GestureDetector(
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(
-                              builder: (context) {
-                                return CartScreen();
-                              },
-                            ));
+                           pushNewScreen(
+                      context,
+                      screen: CartScreen(),
+                      withNavBar: false,
+                    );
                           },
                           child: Icon(
                               size: 30,
                               color: Colors.white,
                               Icons.shopping_cart_outlined),
                         )
-                      ],
+                      ,SizedBox(width: 1,)],
                     ),
                     SizedBox(
                       height: 10,
@@ -152,7 +152,7 @@ class _homeState extends State<home> {
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(
                               builder: (context) {
-                                return details();
+                                return DetailPage();
                               },
                             ));
                           },
@@ -278,7 +278,7 @@ class _homeState extends State<home> {
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(
                                 builder: (context) {
-                                  return details();
+                                  return DetailPage();
                                 },
                               ));
                             },
@@ -348,7 +348,7 @@ class _homeState extends State<home> {
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(
                                 builder: (context) {
-                                  return details();
+                                  return DetailPage();
                                 },
                               ));
                             },
@@ -437,10 +437,13 @@ class _homeState extends State<home> {
   @override
   void initState() {
     getData();
-    get_homepage();
-    get_discounts();
+    initializeData();
+    
   }
-
+Future<void> initializeData() async {
+  await get_homepage();
+  await get_discounts();
+}
   getData() async {
     String? token;
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -477,7 +480,7 @@ class _homeState extends State<home> {
       List list = json.decode(response.body);
     setState(() {
       for (int i = 0; i < list.length; i++) {
-        allproduct Discounted_products = allproduct.fromjson(list[i]);
+        discount__products Discounted_products = discount__products.fromjson(list[i]);
         discounts.add(Discounted_products);
       }
     });
@@ -502,3 +505,21 @@ class allproduct {
     discount = list['discount'];
   }
 }
+class discount__products {
+  String? name;
+  String? brand;
+  int? price;
+  String? image;
+  String? newPrice;
+  int? discount;
+
+  discount__products.fromjson(Map<String, dynamic> list) {
+    name = list['product_name'];
+    brand = list['brand'];
+    price = list['price'];
+    image = list['image'];
+    newPrice = list['new_price'];
+    discount = list['discount'];
+  }
+}
+

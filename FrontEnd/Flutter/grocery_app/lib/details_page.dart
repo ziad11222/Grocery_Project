@@ -230,8 +230,8 @@ class _DetailPageState extends State<DetailPage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(250),
-                child: Image.asset(
-                  'assets/shika.jpg',
+                child: Image.network(
+                  'https://cdn.loveandlemons.com/wp-content/uploads/2020/01/oat-milk-778x1024.jpg',
                   fit: BoxFit.cover,
                   width: 250,
                   height: 250,
