@@ -389,6 +389,7 @@ def get_my_orders():
     except Error as e:
         return jsonify({"error": f"Get orders error: {e}"}), 500
 
+
 @app.route('/getAllProduct', methods=['GET'])
 def get_all_products():
     db_connection.reconnect()
