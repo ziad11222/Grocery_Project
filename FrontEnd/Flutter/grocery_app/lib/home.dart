@@ -23,6 +23,7 @@ class home extends StatefulWidget {
 }
 
 class _homeState extends State<home> {
+  List list = [];
   Map<String, dynamic>? decodedToken;
   String? image;
   String? name;
@@ -42,8 +43,14 @@ class _homeState extends State<home> {
   }
 
   Widget _widget() {
-    if (products.isEmpty || products == null || discounts.isEmpty || discounts == null ) {
-      return Scaffold(body: Center(child: CircularProgressIndicator()),);
+    if (products.isEmpty ||
+        products == null ||
+        products.length != list.length ||
+        discounts.isEmpty ||
+        discounts == null) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     } else {
       return SingleChildScrollView(
         child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
@@ -56,8 +63,10 @@ class _homeState extends State<home> {
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [SizedBox(width: 1,),
-                        
+                      children: [
+                        SizedBox(
+                          width: 1,
+                        ),
                         Column(
                           children: [
                             CircleAvatar(
@@ -75,7 +84,6 @@ class _homeState extends State<home> {
                                 '$name')
                           ],
                         ),
-                        
                         Column(
                           children: [
                             Text(
@@ -89,21 +97,23 @@ class _homeState extends State<home> {
                                 'What do you want to Buy?'),
                           ],
                         ),
-                       
                         GestureDetector(
                           onTap: () {
-                           pushNewScreen(
-                      context,
-                      screen: CartScreen(),
-                      withNavBar: false,
-                    );
+                            pushNewScreen(
+                              context,
+                              screen: CartScreen(),
+                              withNavBar: false,
+                            );
                           },
                           child: Icon(
                               size: 30,
                               color: Colors.white,
                               Icons.shopping_cart_outlined),
+                        ),
+                        SizedBox(
+                          width: 1,
                         )
-                      ,SizedBox(width: 1,)],
+                      ],
                     ),
                     SizedBox(
                       height: 10,
@@ -232,15 +242,22 @@ class _homeState extends State<home> {
                                               fontWeight: FontWeight.bold,
                                               color: Colors.red),
                                           '\$${discounts[i].newPrice}'),
-                                      Container(
-                                        padding: EdgeInsets.all(5),
-                                        decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            color: Colors.green),
-                                        child: Icon(
-                                            color: Colors.white,
-                                            Icons.add_shopping_cart_rounded),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            addToCart(email!, discounts[i].id!);
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              color: Colors.green),
+                                          child: Icon(
+                                              color: Colors.white,
+                                              Icons.add_shopping_cart_rounded),
+                                        ),
                                       )
                                     ],
                                   )
@@ -271,7 +288,6 @@ class _homeState extends State<home> {
                     physics: NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
                     itemBuilder: (context, int i) {
-                      int item = i * 2;
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -284,7 +300,7 @@ class _homeState extends State<home> {
                               ));
                             },
                             child: Container(
-                              width: 190,
+                              width: 370,
                               decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
                                   color: Colors.white),
@@ -297,9 +313,9 @@ class _homeState extends State<home> {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
                                       child: Image.network(
-                                        height: 150,
-                                        width: 300,
-                                        '${products[item].image}',
+                                        height: 200,
+                                        width: 370,
+                                        '${products[i].image}',
                                         fit: BoxFit.cover,
                                       ),
                                     ),
@@ -310,33 +326,38 @@ class _homeState extends State<home> {
                                         style: TextStyle(
                                             fontSize: 17,
                                             fontWeight: FontWeight.bold),
-                                        '${products[item].name}'),
+                                        '${products[i].name}'),
                                     SizedBox(
                                       height: 3,
                                     ),
                                     Text(
                                         style: TextStyle(
                                             fontSize: 12, color: Colors.black),
-                                        "${products[item].brand}"),
+                                        "${products[i].brand}"),
                                     Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                             style: TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.green),
-                                            "\$${products[item].price}"),
-                                        SizedBox(
-                                          width: 110,
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.all(5),
-                                          decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              color: Colors.green),
-                                          child: Icon(
-                                              color: Colors.white,
-                                              Icons.add_shopping_cart_rounded),
+                                            "\$${products[i].price}"),
+                                        GestureDetector(onTap: () {
+                                          setState(() {
+                                            addToCart(email!, products[i].id!);
+                                          });
+                                        },
+                                          child: Container(
+                                            padding: EdgeInsets.all(5),
+                                            decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                color: Colors.green),
+                                            child: Icon(
+                                                color: Colors.white,
+                                                Icons.add_shopping_cart_rounded),
+                                          ),
                                         )
                                       ],
                                     )
@@ -345,76 +366,6 @@ class _homeState extends State<home> {
                               ),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(
-                                builder: (context) {
-                                  return DetailPage();
-                                },
-                              ));
-                            },
-                            child: Container(
-                              width: 190,
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: Colors.white),
-                              child: Padding(
-                                padding:
-                                    EdgeInsets.only(top: 3, right: 3, left: 3),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        height: 150,
-                                        width: 300,
-                                        '${products[item + 1].image}',
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: 3,
-                                    ),
-                                    Text(
-                                        style: TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.bold),
-                                        '${products[item + 1].name}'),
-                                    SizedBox(
-                                      height: 3,
-                                    ),
-                                    Text(
-                                        style: TextStyle(
-                                            fontSize: 12, color: Colors.black),
-                                        "${products[item + 1].brand}"),
-                                    Row(
-                                      children: [
-                                        Text(
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.green),
-                                            "\$${products[item + 1].price}"),
-                                        SizedBox(
-                                          width: 110,
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.all(5),
-                                          decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              color: Colors.green),
-                                          child: Icon(
-                                              color: Colors.white,
-                                              Icons.add_shopping_cart_rounded),
-                                        )
-                                      ],
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                          )
                         ],
                       );
                     },
@@ -423,7 +374,7 @@ class _homeState extends State<home> {
                         height: 10,
                       );
                     },
-                    itemCount: 10),
+                    itemCount: products.length),
                 SizedBox(
                   height: 20,
                 )
@@ -439,12 +390,13 @@ class _homeState extends State<home> {
   void initState() {
     getData();
     initializeData();
-    
   }
-Future<void> initializeData() async {
-  await get_homepage();
-  await get_discounts();
-}
+
+  Future<void> initializeData() async {
+    await get_homepage();
+    await get_discounts();
+  }
+
   getData() async {
     String? token;
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -454,7 +406,7 @@ Future<void> initializeData() async {
       setState(() {
         image = decodedToken['profile_image'];
         name = decodedToken['username'];
-        
+        email = decodedToken['email'];
       });
     }
   }
@@ -462,30 +414,52 @@ Future<void> initializeData() async {
   Future<void> get_homepage() async {
     http.Response response =
         await http.get(Uri.parse('http://34.31.110.154/getAllProduct'));
-    if(response.statusCode == 200){
-      List list = json.decode(response.body);
-   
-    setState(() {
-      for (int i = 0; i < list.length; i++) {
-        allproduct Allproduct = allproduct.fromjson(list[i]);
-        products.add(Allproduct);
-      }
-    });
+    if (response.statusCode == 200) {
+      list = json.decode(response.body);
+
+      setState(() {
+        for (int i = 0; i < list.length; i++) {
+          allproduct Allproduct = allproduct.fromjson(list[i]);
+          products.add(Allproduct);
+        }
+      });
     }
-   
   }
 
   Future<void> get_discounts() async {
     http.Response response =
         await http.get(Uri.parse('http://34.31.110.154/discounted_products'));
-    if(response.statusCode == 200){
+    if (response.statusCode == 200) {
       List list = json.decode(response.body);
-    setState(() {
-      for (int i = 0; i < list.length; i++) {
-        discount__products Discounted_products = discount__products.fromjson(list[i]);
-        discounts.add(Discounted_products);
-      }
-    });
+      setState(() {
+        for (int i = 0; i < list.length; i++) {
+          discount__products Discounted_products =
+              discount__products.fromjson(list[i]);
+          discounts.add(Discounted_products);
+        }
+      });
+    }
+  }
+
+  Future<void> addToCart(String email, int product_id) async {
+    final Map<String, dynamic> add_data = {
+      'client_email': email,
+      'product_id': product_id,
+      'quantity': 1
+    };
+    final http.Response response = await http.post(
+      Uri.parse('http://34.31.110.154/addToCart'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(add_data),
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Product added to the cart')));
+      });
     }
   }
 }
@@ -497,6 +471,7 @@ class allproduct {
   String? image;
   String? newPrice;
   int? discount;
+  int? id;
 
   allproduct.fromjson(Map<String, dynamic> list) {
     name = list['product_name'];
@@ -505,8 +480,10 @@ class allproduct {
     image = list['image'];
     newPrice = list['new_price'];
     discount = list['discount'];
+    id = list['id'];
   }
 }
+
 class discount__products {
   String? name;
   String? brand;
@@ -514,6 +491,7 @@ class discount__products {
   String? image;
   String? newPrice;
   int? discount;
+  int? id;
 
   discount__products.fromjson(Map<String, dynamic> list) {
     name = list['product_name'];
@@ -522,6 +500,6 @@ class discount__products {
     image = list['image'];
     newPrice = list['new_price'];
     discount = list['discount'];
+    id = list['id'];
   }
 }
-
