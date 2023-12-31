@@ -219,9 +219,14 @@ class _loginpageState extends State<loginpage> {
     
     if (response.statusCode == 200) {
       Map<String, dynamic> map = json.decode(response.body);
-      String? message = map['message'];
+      String? message;
 
-    String token = map['token'] ?? '';
+    String? token; 
+    setState(() {
+      message = map['message'];
+
+    token = map['token'] ?? '';
+    });;
     print(message);
       if (message == 'Logged in successfully') {
         Navigator.push(context, MaterialPageRoute(
@@ -230,7 +235,7 @@ class _loginpageState extends State<loginpage> {
           },
         ));
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
+        await prefs.setString('token', token!);
       }
      
     }

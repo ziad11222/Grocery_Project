@@ -26,6 +26,7 @@ class _homeState extends State<home> {
   Map<String, dynamic>? decodedToken;
   String? image;
   String? name;
+  String? email;
   List<allproduct> products = [];
   List<discount__products> discounts = [];
   @override
@@ -453,6 +454,7 @@ Future<void> initializeData() async {
       setState(() {
         image = decodedToken['profile_image'];
         name = decodedToken['username'];
+        
       });
     }
   }
