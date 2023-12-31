@@ -723,6 +723,56 @@ def confirm_orders():
     except Exception as e:
         return jsonify({"error": f"Confirm orders error: {e}"}), 500
 
+# New endpoint to get the number of users who purchased a product
+@app.route('/productPurchaseStats', methods=['GET'])
+def product_purchase_stats():
+    try:
+        # Get the product ID from the query parameters
+        product_id = request.args.get('product_id', type=int)
+
+        if product_id is None:
+            return jsonify({"error": "Product ID is required"}), 400
+
+        # Calculate the total number of users who purchased the product
+        total_users_purchased = get_total_users_purchased(product_id)
+
+        # Calculate the number of users who purchased the product in the last 24 hours
+        users_purchased_last_24_hours = get_users_purchased_last_24_hours(product_id)
+
+        return jsonify({
+            "product_id": product_id,
+            "total_users_purchased": total_users_purchased,
+            "users_purchased_last_24_hours": users_purchased_last_24_hours
+        })
+
+    except Error as e:
+        return jsonify({"error": f"Database error: {e}"}), 500
+
+def get_total_users_purchased(product_id):
+    with db_connection.cursor(dictionary=True) as cursor:
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id) AS total_users
+            FROM product_order
+            WHERE product_id = %s
+        """, (product_id,))
+        result = cursor.fetchone()
+        return result['total_users'] if result else 0
+
+def get_users_purchased_last_24_hours(product_id):
+    # Calculate the timestamp 24 hours ago from the current time
+    twenty_four_hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+
+    with db_connection.cursor(dictionary=True) as cursor:
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id) AS users_last_24_hours
+            FROM product_order
+            WHERE product_id = %s AND order_id IN (
+                SELECT id FROM orders WHERE order_date >= %s
+            )
+        """, (product_id, twenty_four_hours_ago))
+        result = cursor.fetchone()
+        return result['users_last_24_hours'] if result else 0
+
 #OtherEndpoints..... 
 
 
