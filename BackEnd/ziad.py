@@ -211,50 +211,65 @@ def reset_password(token):
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
 
-# Endpoint to place an order (Buy Now)
-@app.route('/placeOrder', methods=['POST'])
-def place_order():
+# Endpoint to place an order using the items in the cart
+@app.route('/place_order', methods=['POST'])
+def place_order_from_cart():
     try:
         data = request.json
         client_email = data.get('client_email')
-        product_id = data.get('product_id')
-        quantity = data.get('quantity')
         payment_method_id = data.get('payment_method_id')
 
-        # Check if the product is in stock and has enough quantity
-        if not is_product_available(product_id, quantity):
-            return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
-        #Creation of a new cart and assigning id to it for the order
+        # Retrieve cart items using the view_cart endpoint
+        view_cart_response = view_cart_helper(client_email)
+
+        if 'error' in view_cart_response:
+            return jsonify({"error": view_cart_response['error']}), 500
+
+        cart_items = view_cart_response['cart_items']
+
+        # Check if there are items in the cart
+        if not cart_items:
+            return jsonify({"error": "No items found in the cart"}), 400
+
+        # Creation of a new cart and assigning id to it for the order
         cart_id = create_cart(client_email)
 
         # Insert the order into the orders table
-        
         with db_connection.cursor(dictionary=True) as cursor:
-
-            # Calculate total price of the order based on product id and quantity
-            total_price = calculate_total_price(product_id,quantity)
-
-            # Insert the order into the orders table
+            total_price = view_cart_response['total_price']
             cursor.execute(
                 "INSERT INTO orders (user_id, cart_id, payment_method, total_price, order_date) "
                 "VALUES (%s, %s, %s, %s, NOW())",
-                (client_email,cart_id, payment_method_id,total_price)  # You may need to modify this query based on your schema
+                (client_email, cart_id, payment_method_id, total_price)
             )
             order_id = cursor.lastrowid
 
             # Insert the product and quantity into the product_order table
-            cursor.execute(
-                "INSERT INTO product_order (product_id, order_id, product_quantity) "
-                "VALUES (%s, %s, %s)",
-                (product_id, order_id, quantity)
-            )
+            for item in cart_items:
+                product_id = item['id']
+                quantity = item['quantity']
+                cursor.execute(
+                    "INSERT INTO product_order (product_id, order_id, product_quantity) "
+                    "VALUES (%s, %s, %s)",
+                    (product_id, order_id, quantity)
+                )
 
             db_connection.commit()
 
         return jsonify({"message": "Order placed successfully"})
-
     except Error as e:
         return jsonify({"error": f"Place order error: {e}"}), 500
+
+
+# Helper function to retrieve cart items using the view_cart endpoint
+def view_cart_helper(client_email):
+    try:
+        with app.test_client() as client:
+            view_cart_response = client.get(f'/view_cart?client_email={client_email}')
+            return view_cart_response.get_json()
+    except Exception as e:
+        return {"error": f"Error calling view_cart endpoint: {e}"}
+
 
 def is_product_available(product_id, requested_quantity):
     
