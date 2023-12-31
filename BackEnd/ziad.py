@@ -505,7 +505,7 @@ def add_to_cart():
         # Check if the product is in stock and has enough quantity
         if not is_product_available(product_id, quantity):
             return jsonify({"error": "Product is out of stock or insufficient quantity"}), 400
-
+        create_cart_if_not_exists(client_email)
         # Check if the product is already in the cart; if yes, update the quantity
         if update_cart_item_quantity(client_email, product_id, quantity):
             return jsonify({"message": "Product quantity in the cart updated successfully"})
@@ -525,6 +525,13 @@ def add_to_cart():
     except Exception as e:
         return jsonify({"error": f"Add to cart error: {e}"}), 500
 
+def create_cart_if_not_exists(client_email):
+    with db_connection.cursor(dictionary=True) as cursor:
+        cursor.execute("SELECT id FROM cart WHERE client_email = %s LIMIT 1", (client_email,))
+        existing_cart = cursor.fetchone()
+        if not existing_cart:
+            cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0)", (client_email,))
+            db_connection.commit()
 
 
 @app.route('/view_cart', methods=['GET'])
