@@ -163,7 +163,7 @@ class _homeState extends State<home> {
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(
                               builder: (context) {
-                                return DetailPage();
+                                return DetailPage(ID: discounts[i].id!,);
                               },
                             ));
                           },
@@ -295,7 +295,7 @@ class _homeState extends State<home> {
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(
                                 builder: (context) {
-                                  return DetailPage();
+                                  return DetailPage(ID: products[i].id!,);
                                 },
                               ));
                             },

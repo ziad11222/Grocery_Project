@@ -1,43 +1,40 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const DetailPage(),
-    );
-  }
-}
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 
 class DetailPage extends StatefulWidget {
-  const DetailPage({Key? key}) : super(key: key);
+  final int ID;
+  const DetailPage({Key? key, required this.ID}) : super(key: key);
 
   @override
   _DetailPageState createState() => _DetailPageState();
 }
 
 class _DetailPageState extends State<DetailPage> {
+  Map? map;
   int quantity = 1;
+  String? email;
+  Map? map_24hour;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.green,
-      body: ListView(
-        children: [
-          const SizedBox(height: 20),
-          header(),
-          const SizedBox(height: 20),
-          image(),
-          details(),
-        ],
-      ),
+      body: map == null || map_24hour == null
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          : ListView(
+              children: [
+                const SizedBox(height: 20),
+                header(),
+                const SizedBox(height: 20),
+                image(),
+                details(),
+              ],
+            ),
     );
   }
 
@@ -55,7 +52,7 @@ class _DetailPageState extends State<DetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'shika',
+                      '${map!['product_name']}',
                       style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
@@ -63,13 +60,18 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                     ),
                     Text(
-                      '\$12',
+                      '\$${map!['new_price']}',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Colors.red,
                       ),
                     ),
+                    map!['discount'] != 0
+                        ? Text(
+                            style: TextStyle(color: Colors.green),
+                            '${map!['discount']}%')
+                        : SizedBox.shrink(),
                   ],
                 ),
               ),
@@ -114,12 +116,12 @@ class _DetailPageState extends State<DetailPage> {
             ],
           ),
           const SizedBox(height: 30),
-          Row(
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Icon(Icons.flag, color: Colors.red, size: 10),
               const SizedBox(width: 4),
               Text(
-                'rafat',
+                '${map!['nationality']}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -129,21 +131,31 @@ class _DetailPageState extends State<DetailPage> {
               const Icon(Icons.flag, color: Colors.red, size: 10),
               const SizedBox(width: 4),
               Text(
-                'rafat',
+                '${map!['brand']}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.access_time, color: Colors.red, size: 10),
+              
               const SizedBox(width: 4),
-              Text(
-                'rafat',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+              Column(
+                children: [
+                  Text(
+                    'Users Purchased :${map_24hour!['total_users_purchased']}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),Text(
+                    'in last 24 hours :${map_24hour!['users_purchased_last_24_hours']}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                ],
               ),
             ],
           ),
@@ -157,7 +169,7 @@ class _DetailPageState extends State<DetailPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'shikabala is the best player in the world. shikabala plays for elzamalek fc,2 of his most iconic goals were scored on el ahly',
+            '${map!['details']}',
             style: TextStyle(
               fontSize: 16,
               color: Colors.black54,
@@ -169,8 +181,7 @@ class _DetailPageState extends State<DetailPage> {
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               onTap: () {
-                // Handle the "Add to Cart" button click here
-                // You can access the quantity variable using the "quantity" property
+                addToCart(email!, widget.ID, quantity);
               },
               child: Container(
                 width: double.infinity,
@@ -221,17 +232,16 @@ class _DetailPageState extends State<DetailPage> {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                  color: Colors.green[300]!,
-                  blurRadius: 16,
-                  offset: Offset(0, 16)
-                  ),
+                      color: Colors.green[300]!,
+                      blurRadius: 16,
+                      offset: Offset(0, 16)),
                 ],
                 borderRadius: BorderRadius.circular(250),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(250),
                 child: Image.network(
-                  'https://cdn.loveandlemons.com/wp-content/uploads/2020/01/oat-milk-778x1024.jpg',
+                  '${map!['image']}',
                   fit: BoxFit.cover,
                   width: 250,
                   height: 250,
@@ -284,5 +294,71 @@ class _DetailPageState extends State<DetailPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    getData();
+    initializeData();
+  }
+
+  Future<void> initializeData() async {
+    await get_info(widget.ID);
+    await getData();
+    await get_24hours();
+  }
+
+  Future<void> get_info(int id) async {
+    http.Response response = await http
+        .get(Uri.parse('http://34.31.110.154/getProductInfo?product_id=$id'));
+    if (response.statusCode == 200) {
+      setState(() {
+        map = json.decode(response.body);
+      }); 
+    }
+  }
+
+  getData() async {
+    String? token;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('token');
+    Map<String, dynamic>? decodedToken = Jwt.parseJwt(token ?? '');
+    if (decodedToken != null) {
+      setState(() {
+        email = decodedToken['email'];
+      });
+    }
+  }
+
+  Future<void> get_24hours() async {
+    http.Response response = await http.get(Uri.parse(
+        'http://34.31.110.154/productPurchaseStats?product_id=${widget.ID}'));
+    if (response.statusCode == 200) {
+      setState(() {
+        map_24hour = json.decode(response.body);
+      });
+    }
+  }
+
+  Future<void> addToCart(String email, int product_id, int quantity) async {
+    final Map<String, dynamic> add_data = {
+      'client_email': email,
+      'product_id': product_id,
+      'quantity': quantity
+    };
+    final http.Response response = await http.post(
+      Uri.parse('http://34.31.110.154/addToCart'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(add_data),
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Product added to the cart')));
+      });
+    }
   }
 }

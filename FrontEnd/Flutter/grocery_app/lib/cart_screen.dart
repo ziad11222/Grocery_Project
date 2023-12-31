@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'payment.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -172,7 +173,13 @@ class _CartScreenState extends State<CartScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(50))),
                     onPressed: () {
-                      setState(() {});
+                      setState(() {
+                        Navigator.push(context, MaterialPageRoute(
+                              builder: (context) {
+                                return CheckoutScreen();
+                              },
+                            ));
+                      });
                     },
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,

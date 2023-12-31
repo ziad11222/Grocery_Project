@@ -250,7 +250,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             return GestureDetector(
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return DetailPage();
+                    return DetailPage(ID: products[i].id!);
                   }));
                 },
                 child: Stack(
@@ -337,7 +337,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             return GestureDetector(
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return DetailPage();
+                    return DetailPage(ID: products[i].id!);
                   }));
                 },
                 child: Stack(
@@ -508,12 +508,14 @@ class search_product {
   String? brand;
   int? price;
   String? image;
+  int? id;
 
   search_product.fromjson(Map<String, dynamic> list) {
     name = list['product_name'];
     brand = list['brand'];
     price = list['price'];
     image = list['image'];
+    id = list['id'];
   }
 }
 
@@ -522,12 +524,14 @@ class filter_product {
   String? brand;
   int? price;
   String? image;
+  int? id;
 
   filter_product.fromjson(Map<String, dynamic> Brands_list) {
     name = Brands_list['product_name'];
     brand = Brands_list['brand'];
     price = Brands_list['price'];
     image = Brands_list['image'];
+    id = Brands_list['id'];
   }
 }
 
@@ -536,11 +540,13 @@ class filter_nation {
   String? brand;
   int? price;
   String? image;
+   int? id;
 
   filter_nation.fromjson(Map<String, dynamic> nations_list) {
     name = nations_list['product_name'];
     brand = nations_list['brand'];
     price = nations_list['price'];
     image = nations_list['image'];
+    id = nations_list['id'];
   }
 }
