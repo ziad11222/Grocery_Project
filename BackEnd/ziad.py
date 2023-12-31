@@ -313,6 +313,7 @@ def create_cart(client_email):
     return cart_id
 
 
+
 # Function to calculate the total price based on product price and quantity
 def calculate_total_price(product_id, quantity):
     with db_connection.cursor(dictionary=True) as cursor:
