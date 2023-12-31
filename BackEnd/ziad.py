@@ -391,6 +391,7 @@ def get_my_orders():
 
 @app.route('/getAllProduct', methods=['GET'])
 def get_all_products():
+    db_connection.reconnect()
     with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM product")
             products = cursor.fetchall()
@@ -399,9 +400,10 @@ def get_all_products():
 
 @app.route('/getProductInfo', methods=['GET'])
 def get_product_info():
+    product_id = request.args.get('product_id', type=int)
     if not (db_connection.is_connected()):
         db_connection.reconnect()
-    product_id = request.args.get('product_id', type=int)
+    
     
     if product_id is None:
         return jsonify({"error": "Product ID is required"}), 400
@@ -457,8 +459,6 @@ def filter_by_nationality():
 
 @app.route('/filterEgyptian', methods=['GET'])
 def filter_Egypt():
-    nationality = request.args.get('nationality')
-
     with db_connection.cursor(dictionary=True) as cursor:
         cursor.execute("SELECT * FROM product WHERE nationality = 'Egyptian'")
         products = cursor.fetchall()
