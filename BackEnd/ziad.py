@@ -468,12 +468,21 @@ def add_to_cart():
         data = request.json
         client_email = data.get('client_email')
         product_id = data.get('product_id')
-        cart_id = data.get('cart_id')
+        #cart_id = data.get('cart_id')
         quantity = data.get('quantity')
 
         # Validate input parameters
         if not all([client_email, product_id, quantity]):
             return jsonify({"error": "Invalid request parameters"}), 400
+        
+        cart_id= get_cart_id(client_email)
+
+        def get_cart_id(client_email):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT id FROM cart WHERE client_email = %s", (client_email,))
+                id = cursor.fetchone()
+                return id 
+
 
         def is_product_available(product_id, requested_quantity):
             
@@ -497,11 +506,22 @@ def add_to_cart():
             cart_id = create_cart(client_email)
 
         # Insert the product into the cart
-        
-        with db_connection.cursor(dictionary=True) as cursor:
-            cursor.execute("INSERT INTO product_cart (product_id, cart_id, quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+        def is_in_cart(product_id, cart_id):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT EXISTS(SELECT * FROM product_cart WHERE product_id = %s AND cart_id = %s)", (product_id, cart_id))
+                result = cursor.fetchone()
+                return bool(result[0])
 
-            db_connection.commit()
+        if is_in_cart(product_id, cart_id):
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("UPDATE product_cart SET product_quantity = product_quantity + %s WHERE product_id = %s AND cart_id = %s", (quantity, product_id, cart_id))
+                db_connection.commit()
+        else:
+            with db_connection.cursor(dictionary=True) as cursor:
+                cursor.execute("INSERT INTO product_cart (product_id, cart_id, product_quantity) VALUES (%s, %s, %s)", (product_id, cart_id, quantity))
+                db_connection.commit()
+
+
 
         return jsonify({"message": "Product added to the cart successfully"})
 
@@ -584,6 +604,42 @@ def remove_from_cart():
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
     except Exception as e:
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
+    
+@app.route('/decreaseProductQuantityInCart', methods=['POST'])
+def decrease_product_quantity_in_cart():
+    try:
+        data = request.json
+        client_email = data.get('client_email')
+        product_id = data.get('product_id')
+
+        # Check if the required parameters are present in the request
+        if not all([client_email, product_id]):
+            return jsonify({"error": "Invalid request parameters"}), 400
+
+        # Decrease the quantity of the specified product in the cart by 1
+        with db_connection.cursor(dictionary=True) as cursor:
+            # Decrease the quantity, and ensure it does not go below 0
+            cursor.execute(
+                "UPDATE product_cart SET quantity = GREATEST(quantity - 1, 0) WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+                (client_email, product_id))
+            db_connection.commit()
+
+            # Check if the product was found in the cart
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Product not found in the cart"}), 404
+
+            # Check if the quantity has become zero and remove the product from the cart
+            cursor.execute(
+                "DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s AND quantity = 0",
+                (client_email, product_id))
+            db_connection.commit()
+
+        return jsonify({"message": "Product quantity in the cart decreased successfully"})
+
+    except IntegrityError as e:
+        return jsonify({"error": f"Decrease product quantity in cart error: {e}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Decrease product quantity in cart error: {e}"}), 500
 
 @app.route('/confirmOrders', methods=['POST'])
 def confirm_orders():
