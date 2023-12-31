@@ -645,6 +645,7 @@ def remove_from_cart():
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
 
 
+
 @app.route('/decreaseProductQuantityInCart', methods=['POST'])
 def decrease_product_quantity_in_cart():
     try:
