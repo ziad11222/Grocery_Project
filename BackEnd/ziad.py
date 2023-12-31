@@ -29,9 +29,11 @@ app.config['MAIL_USERNAME'] = 'Info.Groceryshop@gmail.com'
 app.config['MAIL_PASSWORD'] = 'mkyg vojf mjjx mxst'
 mail = Mail(app)
 
+
 # Helper function to generate OTP
 def generate_otp():
     return str(random.randint(1000, 9999))
+
 
 # Helper function to send verification email
 def send_verification_email(email, verification_code):
@@ -42,14 +44,16 @@ def send_verification_email(email, verification_code):
     except Exception as e:
         print(f"Error sending email: {e}")
 
+
 # Initialize MySQL connection pool
 db_connection = mysql.connector.connect(**db_config)
 
 # Initialize MySQL connection pool
-#db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
+# db_connection = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
 
 
 SECRET_KEY = secrets.token_hex(32)
+
 
 # Endpoint for user login
 @app.route('/login', methods=['POST'])
@@ -114,9 +118,10 @@ def signup():
 
             # Insert new user into the database with 'is_verified' set to False
             verification_code = generate_otp()
-            cursor.execute("INSERT INTO client (email, password, user_name, b_date, address, profile_image, is_verified, verification_code) "
-                            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                            (email, password, user_name, b_date, address, profile_image, False, verification_code))
+            cursor.execute(
+                "INSERT INTO client (email, password, user_name, b_date, address, profile_image, is_verified, verification_code) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (email, password, user_name, b_date, address, profile_image, False, verification_code))
             db_connection.commit()
 
             # Send verification email
@@ -127,7 +132,8 @@ def signup():
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
 
-#verify endpoint
+
+# verify endpoint
 @app.route('/verify', methods=['POST'])
 def verify():
     try:
@@ -136,7 +142,8 @@ def verify():
         verification_code = data.get('verification_code')
 
         with db_connection.cursor(dictionary=True) as cursor:
-            cursor.execute("SELECT * FROM client WHERE email = %s AND verification_code = %s", (email, verification_code))
+            cursor.execute("SELECT * FROM client WHERE email = %s AND verification_code = %s",
+                           (email, verification_code))
             user = cursor.fetchone()
 
             if not user:
@@ -150,11 +157,12 @@ def verify():
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-    
+
 
 # Helper function to generate a unique token for password reset
 def generate_reset_token():
     return secrets.token_urlsafe(32)
+
 
 # Endpoint for requesting a password reset
 @app.route('/forgot-password', methods=['POST'])
@@ -186,7 +194,8 @@ def forgot_password():
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
-        
+
+
 # Endpoint for handling password reset
 @app.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
@@ -203,13 +212,15 @@ def reset_password(token):
 
             # Update the user's password and clear the reset token
             hashed_password = generate_password_hash(new_password)
-            cursor.execute("UPDATE client SET password = %s, reset_token = NULL WHERE email = %s", (hashed_password, user['email']))
+            cursor.execute("UPDATE client SET password = %s, reset_token = NULL WHERE email = %s",
+                           (hashed_password, user['email']))
             db_connection.commit()
 
         return jsonify({"message": "Password reset successful"})
 
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
+
 
 # Endpoint to place an order using the items in the cart
 @app.route('/place_order', methods=['POST'])
@@ -253,9 +264,9 @@ def place_order_from_cart():
                     "VALUES (%s, %s, %s)",
                     (product_id, order_id, quantity)
                 )
-            
+
             # Clear the cart after placing the order
-            clear_cart(client_email)
+            remove_cart_items(client_email)
 
             db_connection.commit()
 
@@ -273,14 +284,16 @@ def view_cart_helper(client_email):
     except Exception as e:
         return {"error": f"Error calling view_cart endpoint: {e}"}
 
-def clear_cart(client_email):
-    with db_connection.cursor() as cursor:
-        cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s)", (client_email,))
-        cursor.execute("DELETE FROM cart WHERE client_email = %s", (client_email,))
-        db_connection.commit()
+
+def remove_cart_items(client_email):
+    try:
+        with app.test_client() as client:
+            remove_from_cart_response = client.post('/removeFromCart', json={"client_email": client_email})
+            return remove_from_cart_response.get_json()
+    except Exception as e:
+        return {"error": f"Error calling remove_from_cart endpoint: {e}"}
 
 def is_product_available(product_id, requested_quantity):
-    
     with db_connection.cursor(dictionary=True) as cursor:
         # Retrieve the product's information
         cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
@@ -289,9 +302,9 @@ def is_product_available(product_id, requested_quantity):
         # Check if the product exists and is in stock
         return product and int(product['quantity']) >= int(requested_quantity)
 
+
 # Function to create a new cart for the user and return the cart_id
 def create_cart(client_email):
-    
     with db_connection.cursor(dictionary=True) as cursor:
         # Insert a new cart for the user
         cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0)", (client_email,))
@@ -299,9 +312,9 @@ def create_cart(client_email):
         db_connection.commit()
     return cart_id
 
+
 # Function to calculate the total price based on product price and quantity
 def calculate_total_price(product_id, quantity):
-    
     with db_connection.cursor(dictionary=True) as cursor:
         # Retrieve the product's information
         cursor.execute("SELECT price FROM product WHERE id = %s", (product_id,))
@@ -314,6 +327,7 @@ def calculate_total_price(product_id, quantity):
             return total_price
     return 0  # Return 0 if the product is not found or if there's an issue retrieving the price
 
+
 # Endpoint to add a payment method
 @app.route('/addPaymentMethod', methods=['POST'])
 def add_payment_method():
@@ -325,10 +339,10 @@ def add_payment_method():
         cvv = data.get('cvv')
 
         # Insert the payment method into the database
-    
+
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("INSERT INTO payment (user_id, card_owner, card_number, cvv) VALUES (%s, %s, %s, %s)",
-                            (client_email, card_owner, card_number, cvv))
+                           (client_email, card_owner, card_number, cvv))
             db_connection.commit()
 
         return jsonify({"message": "Payment method added successfully"})
@@ -346,7 +360,7 @@ def remove_payment_method():
         payment_method_id = data.get('payment_method_id')
 
         # Remove the payment method from the database
-        
+
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("DELETE FROM payment WHERE user_id = %s AND id = %s", (client_email, payment_method_id))
             affected_rows = cursor.rowcount
@@ -360,12 +374,13 @@ def remove_payment_method():
     except IntegrityError as e:
         return jsonify({"error": f"Remove payment method error: {e}"}), 500
 
+
 @app.route('/getPaymentMethods', methods=['GET'])
 def get_payment_methods():
     try:
         client_email = request.args.get('client_email')
         # Query the database to retrieve payment methods
-        
+
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM payment WHERE user_id = %s", (client_email,))
             payment_methods = cursor.fetchall()
@@ -378,13 +393,14 @@ def get_payment_methods():
     except Error as e:
         return jsonify({"error": f"Get payment methods error: {e}"}), 500
 
+
 @app.route('/myOrders', methods=['GET'])
 def get_my_orders():
     try:
         client_email = request.args.get('client_email')
 
         # Query the database to retrieve user's orders
-        
+
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("SELECT * FROM orders WHERE user_id = %s", (client_email,))
             orders = cursor.fetchall()
@@ -396,24 +412,25 @@ def get_my_orders():
     except Error as e:
         return jsonify({"error": f"Get orders error: {e}"}), 500
 
+
 @app.route('/getAllProduct', methods=['GET'])
 def get_all_products():
     with db_connection.cursor(dictionary=True) as cursor:
-            cursor.execute("SELECT * FROM product")
-            products = cursor.fetchall()
+        cursor.execute("SELECT * FROM product")
+        products = cursor.fetchall()
 
     return jsonify(products)
+
 
 @app.route('/getProductInfo', methods=['GET'])
 def get_product_info():
     if not (db_connection.is_connected()):
         db_connection.reconnect()
     product_id = request.args.get('product_id', type=int)
-    
+
     if product_id is None:
         return jsonify({"error": "Product ID is required"}), 400
 
-    
     with db_connection.cursor(dictionary=True) as cursor:
         cursor.execute("SELECT * FROM product WHERE id = %s", (product_id,))
         product = cursor.fetchone()
@@ -424,8 +441,6 @@ def get_product_info():
     return jsonify(product)
 
 
-
-
 @app.route('/filterByPrice', methods=['GET'])
 def filter_by_price():
     price_from = request.args.get('from')
@@ -433,7 +448,7 @@ def filter_by_price():
 
     with db_connection.cursor(dictionary=True) as cursor:
         query = "SELECT * FROM product WHERE price BETWEEN %s AND %s"
-        cursor.execute(query,(price_from, price_to))
+        cursor.execute(query, (price_from, price_to))
         products = cursor.fetchall()
 
     return jsonify(products)
@@ -443,16 +458,15 @@ def filter_by_price():
 def filter_by_brand():
     brand_name = request.args.get('brandName')
 
-   
     with db_connection.cursor(dictionary=True) as cursor:
         cursor.execute("SELECT * FROM product WHERE brand = %s", (brand_name,))
         products = cursor.fetchall()
 
     return jsonify(products)
 
+
 @app.route('/filterByNationality', methods=['GET'])
 def filter_by_nationality():
-
     nationality = request.args.get('nationality')
 
     with db_connection.cursor(dictionary=True) as cursor:
@@ -472,6 +486,7 @@ def filter_Egypt():
 
     return jsonify(products)
 
+
 @app.route('/getBySearch', methods=['GET'])
 def search_products():
     # Get search query from query parameters
@@ -488,8 +503,9 @@ def search_products():
 # Helper function to update the quantity of a product in the cart
 def update_cart_item_quantity(client_email, product_id, quantity):
     with db_connection.cursor(dictionary=True) as cursor:
-        cursor.execute("SELECT quantity FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
-                       (client_email, product_id))
+        cursor.execute(
+            "SELECT quantity FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
+            (client_email, product_id))
         current_quantity_result = cursor.fetchone()
 
         if current_quantity_result and 'quantity' in current_quantity_result:
@@ -502,6 +518,7 @@ def update_cart_item_quantity(client_email, product_id, quantity):
             return True
         else:
             return False
+
 
 # Endpoint to add a product to the cart
 @app.route('/addToCart', methods=['POST'])
@@ -520,7 +537,7 @@ def add_to_cart():
         create_cart_if_not_exists(client_email)
         if update_cart_item_quantity(client_email, product_id, quantity):
             return jsonify({"message": "Product quantity in the cart updated successfully"})
-        
+
         # Add the product to the cart
         with db_connection.cursor(dictionary=True) as cursor:
             cursor.execute("INSERT INTO product_cart (cart_id, product_id, quantity) "
@@ -535,7 +552,7 @@ def add_to_cart():
         return jsonify({"error": f"Add to cart error: {e}"}), 500
     except Exception as e:
         return jsonify({"error": f"Add to cart error: {e}"}), 500
-    
+
 
 def create_cart_if_not_exists(client_email):
     with db_connection.cursor(dictionary=True) as cursor:
@@ -544,7 +561,6 @@ def create_cart_if_not_exists(client_email):
         if not existing_cart:
             cursor.execute("INSERT INTO cart (client_email, quantity, total_price) VALUES (%s, 0, 0)", (client_email,))
             db_connection.commit()
-
 
 
 @app.route('/view_cart', methods=['GET'])
@@ -570,13 +586,13 @@ def view_cart():
                     cart.client_email = %s
             """, (client_email,))
 
-            cart_items = cursor.fetchall() 
+            cart_items = cursor.fetchall()
 
         if not cart_items:
             return jsonify({"message": "No items found in the cart"}), 404
-        
+
         total_price = sum(item['price'] * item['quantity'] for item in cart_items)
-        for item in cart_items: 
+        for item in cart_items:
             item['total_price'] = item['price'] * item['quantity']
 
         return jsonify({"cart_items": cart_items, "total_price": total_price})
@@ -584,7 +600,7 @@ def view_cart():
     except Error as e:
         return jsonify({"error": f"View cart error: {e}"}), 500
 
-    
+
 @app.route('/discounted_products', methods=['GET'])
 def discounted_products():
     try:
@@ -606,24 +622,28 @@ def remove_from_cart():
     try:
         data = request.json
         client_email = data.get('client_email')
-        product_id = data.get('product_id')
-        if not all([client_email, product_id]):
+
+        if not client_email:
             return jsonify({"error": "Invalid request parameters"}), 400
-        # Remove the product from the cart
-        
+
+        # Remove all products from the cart for the specified client_email
         with db_connection.cursor(dictionary=True) as cursor:
-            cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s) AND product_id = %s",
-                            (client_email, product_id))
+            cursor.execute(
+                "DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s)",
+                (client_email,))
             affected_rows = cursor.rowcount
             db_connection.commit()
+
             if affected_rows == 0:
-                return jsonify({"error": "Product not found in the cart"}), 404
-        return jsonify({"message": "Product removed from the cart successfully"})
+                return jsonify({"error": "No products found in the cart"}), 404
+
+        return jsonify({"message": "All products removed from the cart successfully"})
     except IntegrityError as e:
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
     except Exception as e:
         return jsonify({"error": f"Remove from cart error: {e}"}), 500
-    
+
+
 @app.route('/decreaseProductQuantityInCart', methods=['POST'])
 def decrease_product_quantity_in_cart():
     try:
@@ -703,7 +723,6 @@ def confirm_orders():
         if not all([client_email, cart_id, payment_method_id]):
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        
         with db_connection.cursor(dictionary=True) as cursor:
             # Check if the cart is not empty
             cursor.execute("SELECT * FROM product_cart WHERE cart_id = %s", (cart_id,))
@@ -714,9 +733,9 @@ def confirm_orders():
 
             # Calculate the total price of the order
             cursor.execute("SELECT SUM(product.price * product_cart.product_quantity) AS total_price "
-                            "FROM product_cart "
-                            "INNER JOIN product ON product_cart.product_id = product.id "
-                            "WHERE product_cart.cart_id = %s", (cart_id,))
+                           "FROM product_cart "
+                           "INNER JOIN product ON product_cart.product_id = product.id "
+                           "WHERE product_cart.cart_id = %s", (cart_id,))
             total_price_result = cursor.fetchone()
             total_price = total_price_result['total_price'] if total_price_result['total_price'] else 0
 
@@ -747,6 +766,7 @@ def confirm_orders():
     except Exception as e:
         return jsonify({"error": f"Confirm orders error: {e}"}), 500
 
+
 # New endpoint to get the number of users who purchased a product
 @app.route('/productPurchaseStats', methods=['GET'])
 def product_purchase_stats():
@@ -772,6 +792,7 @@ def product_purchase_stats():
     except Error as e:
         return jsonify({"error": f"Database error: {e}"}), 500
 
+
 def get_total_users_purchased(product_id):
     with db_connection.cursor(dictionary=True) as cursor:
         cursor.execute("""
@@ -781,6 +802,7 @@ def get_total_users_purchased(product_id):
         """, (product_id,))
         result = cursor.fetchone()
         return result['total_users'] if result else 0
+
 
 def get_users_purchased_last_24_hours(product_id):
     # Calculate the timestamp 24 hours ago from the current time
@@ -796,7 +818,7 @@ def get_users_purchased_last_24_hours(product_id):
         """, (product_id, twenty_four_hours_ago))
         result = cursor.fetchone()
         return result['users_last_24_hours'] if result else 0
-    
+
 
 def calculate_and_update_total_price(client_email):
     try:
@@ -812,21 +834,23 @@ def calculate_and_update_total_price(client_email):
                 JOIN cart c ON pc.cart_id = c.id
                 WHERE c.client_email = %s 
             """, (client_email,))
-            
+
             cart_items = cursor.fetchall()
 
             total_price = sum(item['price'] * item['quantity'] for item in cart_items)
             total_quantity = sum(item['quantity'] for item in cart_items)
 
             # Update the total price and quantity in the cart table
-            cursor.execute("UPDATE cart SET total_price = %s, quantity = %s WHERE client_email = %s", (total_price, total_quantity, client_email))
+            cursor.execute("UPDATE cart SET total_price = %s, quantity = %s WHERE client_email = %s",
+                           (total_price, total_quantity, client_email))
             db_connection.commit()
 
     except Error as e:
         print(f"Error calculating and updating total price and quantity: {e}")
         raise  # You may want to handle this error more gracefully in your production code
 
-#OtherEndpoints..... 
+
+# OtherEndpoints.....
 
 
 # Run the Flask app
