@@ -253,6 +253,9 @@ def place_order_from_cart():
                     "VALUES (%s, %s, %s)",
                     (product_id, order_id, quantity)
                 )
+            
+            # Clear the cart after placing the order
+            clear_cart(client_email)
 
             db_connection.commit()
 
@@ -270,6 +273,11 @@ def view_cart_helper(client_email):
     except Exception as e:
         return {"error": f"Error calling view_cart endpoint: {e}"}
 
+def clear_cart(client_email):
+    with db_connection.cursor() as cursor:
+        cursor.execute("DELETE FROM product_cart WHERE cart_id IN (SELECT id FROM cart WHERE client_email = %s)", (client_email,))
+        cursor.execute("DELETE FROM cart WHERE client_email = %s", (client_email,))
+        db_connection.commit()
 
 def is_product_available(product_id, requested_quantity):
     
