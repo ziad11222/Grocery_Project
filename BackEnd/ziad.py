@@ -554,8 +554,12 @@ def view_cart():
 
         if not cart_items:
             return jsonify({"message": "No items found in the cart"}), 404
+        
+        total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+        for item in cart_items: 
+            item['total_price'] = item['price'] * item['quantity']
 
-        return jsonify(cart_items)
+        return jsonify({"cart_items": cart_items, "total_price": total_price})
 
     except Error as e:
         return jsonify({"error": f"View cart error: {e}"}), 500
